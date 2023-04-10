@@ -1,2 +1,8 @@
 [profile.ci.fuzz]
 runs = 10_000
+
+[profile.default]
+src = 'contracts'
+out = 'artifacts'
+
+fs_permissions = [{ access = "read", path = "./"}]
