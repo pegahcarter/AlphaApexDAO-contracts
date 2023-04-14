@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
+import { IERC20 } from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from  "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IUniswapV2Router02 } from  "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
-import "./interfaces/IDividendTracker.sol";
-import "./interfaces/ITokenStorage.sol";
+import { IDividendTracker } from  "./interfaces/IDividendTracker.sol";
+import { ITokenStorage } from  "./interfaces/ITokenStorage.sol";
 
 contract TokenStorage is Ownable, ITokenStorage {
     using SafeERC20 for IERC20;
@@ -18,20 +17,20 @@ contract TokenStorage is Ownable, ITokenStorage {
     IDividendTracker public immutable dividendTracker;
     IUniswapV2Router02 public uniswapV2Router;
 
-    address public immutable dai;
+    address public immutable usdc;
     address public immutable tokenAddress;
     address public liquidityWallet;
 
     mapping(address => bool) public managers;
 
     constructor(
-        address _dai,
+        address _usdc,
         address _tokenAddress,
         address _liquidityWallet,
         address _dividendTracker,
         address _uniswapRouter
     ) {
-        require(_dai != address(0), "DAI address zero");
+        require(_usdc != address(0), "USDC address zero");
         require(_tokenAddress != address(0), "Token address zero");
         require(
             _liquidityWallet != address(0),
@@ -43,7 +42,7 @@ contract TokenStorage is Ownable, ITokenStorage {
         );
         require(_uniswapRouter != address(0), "Uniswap router address zero");
 
-        dai = _dai;
+        usdc = _usdc;
         tokenAddress = _tokenAddress;
         liquidityWallet = _liquidityWallet;
         dividendTracker = IDividendTracker(_dividendTracker);
@@ -53,7 +52,7 @@ contract TokenStorage is Ownable, ITokenStorage {
     /* ============ External Owner Functions ============ */
 
     function addManager(address _address) external onlyOwner {
-        require(tokenAddress == _address, "Digits: must be digits address.");
+        require(tokenAddress == _address, "must be Apex address.");
         managers[_address] = true;
     }
 
@@ -63,46 +62,46 @@ contract TokenStorage is Ownable, ITokenStorage {
 
     /* ============ External Functions ============ */
 
-    function transferDai(address to, uint256 amount) external {
+    function transferUSDC(address to, uint256 amount) external {
         require(
             managers[msg.sender],
             "This address is not allowed to interact with the contract"
         );
-        IERC20(dai).safeTransfer(to, amount);
+        IERC20(usdc).safeTransfer(to, amount);
     }
 
-    function swapTokensForDai(uint256 tokens) external {
+    function swapTokensForUSDC(uint256 tokens) external {
         require(
             managers[msg.sender],
             "This address is not allowed to interact with the contract"
         );
         address[] memory path = new address[](2);
         path[0] = address(tokenAddress);
-        path[1] = dai;
+        path[1] = usdc;
 
         IERC20(tokenAddress).approve(address(uniswapV2Router), tokens);
         uniswapV2Router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             tokens,
-            0, // accept any amount of dai
+            0, // accept any amount of usdc
             path,
             address(this),
             block.timestamp
         );
     }
 
-    function addLiquidity(uint256 tokens, uint256 dais) external {
+    function addLiquidity(uint256 tokens, uint256 usdcs) external {
         require(
             managers[msg.sender],
             "This address is not allowed to interact with the contract"
         );
         IERC20(tokenAddress).approve(address(uniswapV2Router), tokens);
-        IERC20(dai).approve(address(uniswapV2Router), dais);
+        IERC20(usdc).approve(address(uniswapV2Router), usdcs);
 
         uniswapV2Router.addLiquidity(
             address(tokenAddress),
-            dai,
+            usdc,
             tokens,
-            dais,
+            usdcs,
             0, // slippage unavoidable
             0, // slippage unavoidable
             liquidityWallet,
@@ -112,15 +111,15 @@ contract TokenStorage is Ownable, ITokenStorage {
 
     function distributeDividends(
         uint256 swapTokensDividends,
-        uint256 daiDividends
+        uint256 usdcDividends
     ) external {
         require(
             managers[msg.sender],
             "This address is not allowed to interact with the contract"
         );
-        IERC20(dai).approve(address(dividendTracker), daiDividends);
-        try dividendTracker.distributeDividends(daiDividends) {
-            emit SendDividends(swapTokensDividends, daiDividends);
+        IERC20(usdc).approve(address(dividendTracker), usdcDividends);
+        try dividendTracker.distributeDividends(usdcDividends) {
+            emit SendDividends(swapTokensDividends, usdcDividends);
         } catch Error(
             string memory /*err*/
         ) {}

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
-interface IDigits {
+interface IAlphaApexDAO {
     event SwapAndAddLiquidity(
         uint256 tokensSwapped,
-        uint256 daiReceived,
+        uint256 usdcReceived,
         uint256 tokensIntoLiquidity
     );
     event ExcludeFromFees(address indexed account, bool isExcluded);
@@ -24,10 +23,6 @@ interface IDigits {
         uint256 _swapTokensAtAmount,
         bool _swapAllToken
     );
-    event SetMaxTxBPS(uint256 bps);
-    event ExcludeFromMaxTx(address account, bool excluded);
-    event SetMaxWalletBPS(uint256 bps);
-    event ExcludeFromMaxWallet(address account, bool excluded);
 
     function claim() external;
 

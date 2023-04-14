@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IUniswapV2Router02 } from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 import "./interfaces/IDividendTracker.sol";
 
@@ -14,12 +13,12 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
     /* ============ State ============ */
 
-    string private constant _name = "Digits_DividendTracker";
-    string private constant _symbol = "Digits_DividendTracker";
+    string private constant _name = "Apex_DividendTracker";
+    string private constant _symbol = "Apex_DividendTracker";
     uint256 private constant minTokenBalanceForDividends = 10000 * (10**18);
     uint256 private constant magnitude = 2**128;
 
-    address public immutable dai;
+    address public immutable usdc;
     address public immutable tokenAddress;
     IUniswapV2Router02 public immutable uniswapV2Router;
 
@@ -37,34 +36,34 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     mapping(address => uint256) private lastClaimTimes;
 
     constructor(
-        address _dai,
+        address _usdc,
         address _tokenAddress,
         address _uniswapRouter
     ) {
-        require(_dai != address(0), "DAI address zero");
+        require(_usdc != address(0), "USDC address zero");
         require(_tokenAddress != address(0), "Token address zero");
         require(_uniswapRouter != address(0), "Uniswap router address zero");
 
-        dai = _dai;
+        usdc = _usdc;
         tokenAddress = _tokenAddress;
         uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
     }
 
     /* ============ External Functions ============ */
 
-    function distributeDividends(uint256 daiDividends) external {
+    function distributeDividends(uint256 usdcDividends) external {
         require(_totalSupply > 0, "dividends unavailable yet");
-        if (daiDividends > 0) {
-            IERC20(dai).safeTransferFrom(
+        if (usdcDividends > 0) {
+            IERC20(usdc).safeTransferFrom(
                 msg.sender,
                 address(this),
-                daiDividends
+                usdcDividends
             );
             magnifiedDividendPerShare =
                 magnifiedDividendPerShare +
-                ((daiDividends * magnitude) / _totalSupply);
-            emit DividendsDistributed(msg.sender, daiDividends);
-            totalDividendsDistributed += daiDividends;
+                ((usdcDividends * magnitude) / _totalSupply);
+            emit DividendsDistributed(msg.sender, usdcDividends);
+            totalDividendsDistributed += usdcDividends;
         }
     }
 
@@ -90,7 +89,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     {
         require(
             excludedFromDividends[account] != excluded,
-            "Digits_DividendTracker: account already set to requested state"
+            "Apex_DividendTracker: account already set to requested state"
         );
         excludedFromDividends[account] = excluded;
         if (excluded) {
@@ -220,7 +219,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     }
 
     function transfer(address, uint256) public pure override returns (bool) {
-        revert("Digits_DividendTracker: method not implemented");
+        revert("Apex_DividendTracker: method not implemented");
     }
 
     function allowance(address, address)
@@ -229,11 +228,11 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
         override
         returns (uint256)
     {
-        revert("Digits_DividendTracker: method not implemented");
+        revert("Apex_DividendTracker: method not implemented");
     }
 
     function approve(address, uint256) public pure override returns (bool) {
-        revert("Digits_DividendTracker: method not implemented");
+        revert("Apex_DividendTracker: method not implemented");
     }
 
     function transferFrom(
@@ -241,7 +240,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
         address,
         uint256
     ) public pure override returns (bool) {
-        revert("Digits_DividendTracker: method not implemented");
+        revert("Apex_DividendTracker: method not implemented");
     }
 
     /* ============ Internal/Private Functions ============ */
@@ -260,7 +259,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     function _mint(address account, uint256 amount) private {
         require(
             account != address(0),
-            "Digits_DividendTracker: mint to the zero address"
+            "Apex_DividendTracker: mint to the zero address"
         );
         _totalSupply += amount;
         _balances[account] += amount;
@@ -273,12 +272,12 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     function _burn(address account, uint256 amount) private {
         require(
             account != address(0),
-            "Digits_DividendTracker: burn from the zero address"
+            "Apex_DividendTracker: burn from the zero address"
         );
         uint256 accountBalance = _balances[account];
         require(
             accountBalance >= amount,
-            "Digits_DividendTracker: burn amount exceeds balance"
+            "Apex_DividendTracker: burn amount exceeds balance"
         );
         _balances[account] = accountBalance - amount;
         _totalSupply -= amount;
@@ -298,7 +297,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
             totalDividendsWithdrawn += _withdrawableDividend;
             emit DividendWithdrawn(account, _withdrawableDividend);
 
-            IERC20(dai).safeTransfer(account, _withdrawableDividend);
+            IERC20(usdc).safeTransfer(account, _withdrawableDividend);
 
             return _withdrawableDividend;
         }
@@ -316,14 +315,14 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
             emit DividendWithdrawn(account, _withdrawableDividend);
 
             address[] memory path = new address[](2);
-            path[0] = dai;
+            path[0] = usdc;
             path[1] = address(tokenAddress);
 
             bool success = false;
             uint256 tokens = 0;
 
             uint256 initTokenBal = IERC20(tokenAddress).balanceOf(account);
-            IERC20(dai).approve(
+            IERC20(usdc).approve(
                 address(uniswapV2Router),
                 _withdrawableDividend
             );

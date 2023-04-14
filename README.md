@@ -4,6 +4,24 @@
 
 ![Github Actions](https://github.com/foundry-rs/forge-template/workflows/CI/badge.svg)
 
+## TODO
+* [ ] DAI => USDC
+    * [x] rename vars
+    * [ ] set contract addresses
+    * [ ] token rounding check
+* [ ] Add logic for buy orders
+* [ ] Add logic for sell orders
+* [ ] Setup
+    * [ ] Configure initial distribution recipients and amounts 
+    * [ ] Configure address for uniswap
+* [ ] Safemath
+    * [x] Rmv from MultiRewards
+    * [ ] Re-validate math 
+* [x] Rmv max wallet checks
+* [ ] Deployment script
+* [ ] Test Deployment
+* [ ] Fix imports
+
 ## Getting Started
 
 Click "Use this template" on [GitHub](https://github.com/foundry-rs/forge-template) to create a new repository with this repo as the initial state.

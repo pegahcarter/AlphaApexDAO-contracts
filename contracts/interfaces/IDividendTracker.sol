@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
 interface IDividendTracker {
@@ -9,7 +8,7 @@ interface IDividendTracker {
     event Claim(address indexed account, uint256 amount);
     event Compound(address indexed account, uint256 amount, uint256 tokens);
 
-    function distributeDividends(uint256 daiDividends) external;
+    function distributeDividends(uint256 usdcDividends) external;
 
     function excludeFromDividends(address account, bool excluded) external;
 
