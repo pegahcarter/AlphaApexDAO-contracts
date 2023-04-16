@@ -39,6 +39,20 @@ contract MultiRewards is Ownable, ReentrancyGuard {
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
 
+    /* ========== EVENTS ========== */
+
+    event RewardAdded(uint256 reward);
+    event Staked(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+    event RewardPaid(
+        address indexed user,
+        address indexed rewardsToken,
+        uint256 reward
+    );
+    event ReflectionPaid(address indexed user, uint256 reward);
+    event RewardsDurationUpdated(address token, uint256 newDuration);
+    event Recovered(address token, uint256 amount);
+
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
@@ -280,18 +294,4 @@ contract MultiRewards is Ownable, ReentrancyGuard {
             emit ReflectionPaid(account, reward);
         }
     }
-
-    /* ========== EVENTS ========== */
-
-    event RewardAdded(uint256 reward);
-    event Staked(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 amount);
-    event RewardPaid(
-        address indexed user,
-        address indexed rewardsToken,
-        uint256 reward
-    );
-    event ReflectionPaid(address indexed user, uint256 reward);
-    event RewardsDurationUpdated(address token, uint256 newDuration);
-    event Recovered(address token, uint256 amount);
 }

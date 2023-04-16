@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.10;
 
-import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
-import { IERC20 } from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from  "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IUniswapV2Router02 } from  "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import { IERC20} from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20} from  "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IUniswapV2Router02} from  "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
-import { IDividendTracker } from  "./interfaces/IDividendTracker.sol";
-import { ITokenStorage } from  "./interfaces/ITokenStorage.sol";
+import { IDividendTracker} from  "./interfaces/IDividendTracker.sol";
+import { ITokenStorage} from  "./interfaces/ITokenStorage.sol";
 
-contract TokenStorage is Ownable, ITokenStorage {
+contract TokenStorage is ITokenStorage {
     using SafeERC20 for IERC20;
 
     /* ============ State ============ */
@@ -20,8 +20,6 @@ contract TokenStorage is Ownable, ITokenStorage {
     address public immutable usdc;
     address public immutable tokenAddress;
     address public liquidityWallet;
-
-    mapping(address => bool) public managers;
 
     constructor(
         address _usdc,
@@ -49,22 +47,11 @@ contract TokenStorage is Ownable, ITokenStorage {
         uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
     }
 
-    /* ============ External Owner Functions ============ */
-
-    function addManager(address _address) external onlyOwner {
-        require(tokenAddress == _address, "must be Apex address.");
-        managers[_address] = true;
-    }
-
-    function removeManager(address _address) external onlyOwner {
-        managers[_address] = false;
-    }
-
     /* ============ External Functions ============ */
 
     function transferUSDC(address to, uint256 amount) external {
         require(
-            managers[msg.sender],
+            msg.sender == tokenAddress,
             "This address is not allowed to interact with the contract"
         );
         IERC20(usdc).safeTransfer(to, amount);
@@ -72,7 +59,7 @@ contract TokenStorage is Ownable, ITokenStorage {
 
     function swapTokensForUSDC(uint256 tokens) external {
         require(
-            managers[msg.sender],
+            msg.sender == tokenAddress,
             "This address is not allowed to interact with the contract"
         );
         address[] memory path = new address[](2);
@@ -91,7 +78,7 @@ contract TokenStorage is Ownable, ITokenStorage {
 
     function addLiquidity(uint256 tokens, uint256 usdcs) external {
         require(
-            managers[msg.sender],
+            msg.sender == tokenAddress,
             "This address is not allowed to interact with the contract"
         );
         IERC20(tokenAddress).approve(address(uniswapV2Router), tokens);
@@ -114,7 +101,7 @@ contract TokenStorage is Ownable, ITokenStorage {
         uint256 usdcDividends
     ) external {
         require(
-            managers[msg.sender],
+            msg.sender == tokenAddress,
             "This address is not allowed to interact with the contract"
         );
         IERC20(usdc).approve(address(dividendTracker), usdcDividends);
@@ -127,7 +114,7 @@ contract TokenStorage is Ownable, ITokenStorage {
 
     function setLiquidityWallet(address _liquidityWallet) external {
         require(
-            managers[msg.sender],
+            msg.sender == tokenAddress,
             "This address is not allowed to interact with the contract"
         );
         require(_liquidityWallet != address(0), "Digits: zero!");

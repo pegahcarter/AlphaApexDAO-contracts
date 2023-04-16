@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.10;
 
 import { Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -37,7 +38,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     uint256 public swapTokensAtAmount = 100000 * (10**18);
     uint256 public lastSwapTime;
 
-    bool public isOpen = false;
     bool public swapAllToken = true;
     bool public swapEnabled = true;
     bool public taxEnabled = true;
@@ -52,13 +52,11 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
     mapping(address => bool) private _isExcludedFromFees;
-    mapping(address => bool) private _whiteList;
 
     constructor(
         address _usdc,
         address _uniswapRouter,
-        address _marketingWallet,
-        address[] memory whitelistAddress
+        address _marketingWallet
     ) {
         require(_usdc != address(0), "USDC address zero");
         require(_uniswapRouter != address(0), "Uniswap router address zero");
@@ -69,7 +67,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
         usdc = IERC20(_usdc);
         marketingWallet = _marketingWallet;
-        includeToWhiteList(whitelistAddress);
 
         uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
         uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(
@@ -261,15 +258,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         address recipient,
         uint256 amount
     ) internal {
-        require(
-            isOpen ||
-                sender == owner() ||
-                recipient == owner() ||
-                _whiteList[sender] ||
-                _whiteList[recipient],
-            "Not Open"
-        );
-
         require(sender != address(0), "Apex: transfer from 0 address");
         require(recipient != address(0), "Apex: transfer to 0 address");
 
@@ -358,12 +346,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         _totalSupply += amount;
         _balances[account] += amount;
         emit Transfer(address(0), account, amount);
-    }
-
-    function includeToWhiteList(address[] memory _users) private {
-        for (uint8 i = 0; i < _users.length; i++) {
-            _whiteList[_users[i]] = true;
-        }
     }
 
     function _executeSwap(uint256 tokens, uint256 usdcs) private {
@@ -499,10 +481,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         compoundingEnabled = _enabled;
 
         emit CompoundingEnabled(_enabled);
-    }
-
-    function openTrading() external onlyOwner {
-        isOpen = true;
     }
 
     function updateDividendSettings(
