@@ -19,7 +19,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     uint256 private constant magnitude = 2**128;
 
     address public immutable usdc;
-    address public immutable tokenAddress;
+    address public immutable apex;
     IUniswapV2Router02 public immutable uniswapV2Router;
 
     uint256 public totalDividendsDistributed;
@@ -37,15 +37,15 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
     constructor(
         address _usdc,
-        address _tokenAddress,
+        address _apex,
         address _uniswapRouter
     ) {
         require(_usdc != address(0), "USDC address zero");
-        require(_tokenAddress != address(0), "Token address zero");
+        require(_apex != address(0), "APEX address zero");
         require(_uniswapRouter != address(0), "Uniswap router address zero");
 
         usdc = _usdc;
-        tokenAddress = _tokenAddress;
+        apex = _apex;
         uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
     }
 
@@ -95,7 +95,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
         if (excluded) {
             _setBalance(account, 0);
         } else {
-            uint256 newBalance = IERC20(tokenAddress).balanceOf(account);
+            uint256 newBalance = IERC20(apex).balanceOf(account);
             if (newBalance >= minTokenBalanceForDividends) {
                 _setBalance(account, newBalance);
             } else {
@@ -316,12 +316,12 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
             address[] memory path = new address[](2);
             path[0] = usdc;
-            path[1] = address(tokenAddress);
+            path[1] = address(apex);
 
             bool success = false;
             uint256 tokens = 0;
 
-            uint256 initTokenBal = IERC20(tokenAddress).balanceOf(account);
+            uint256 initTokenBal = IERC20(apex).balanceOf(account);
             IERC20(usdc).approve(
                 address(uniswapV2Router),
                 _withdrawableDividend
@@ -337,7 +337,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
                     )
             {
                 success = true;
-                tokens = IERC20(tokenAddress).balanceOf(account) - initTokenBal;
+                tokens = IERC20(apex).balanceOf(account) - initTokenBal;
             } catch Error(
                 string memory /*err*/
             ) {

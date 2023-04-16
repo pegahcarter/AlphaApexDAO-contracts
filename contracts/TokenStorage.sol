@@ -18,18 +18,18 @@ contract TokenStorage is ITokenStorage {
     IUniswapV2Router02 public uniswapV2Router;
 
     address public immutable usdc;
-    address public immutable tokenAddress;
+    address public immutable apex;
     address public liquidityWallet;
 
     constructor(
         address _usdc,
-        address _tokenAddress,
+        address _apex,
         address _liquidityWallet,
         address _dividendTracker,
         address _uniswapRouter
     ) {
         require(_usdc != address(0), "USDC address zero");
-        require(_tokenAddress != address(0), "Token address zero");
+        require(_apex != address(0), "Apex address zero");
         require(
             _liquidityWallet != address(0),
             "Liquidity wallet address zero"
@@ -41,7 +41,7 @@ contract TokenStorage is ITokenStorage {
         require(_uniswapRouter != address(0), "Uniswap router address zero");
 
         usdc = _usdc;
-        tokenAddress = _tokenAddress;
+        apex = _apex;
         liquidityWallet = _liquidityWallet;
         dividendTracker = IDividendTracker(_dividendTracker);
         uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
@@ -50,23 +50,17 @@ contract TokenStorage is ITokenStorage {
     /* ============ External Functions ============ */
 
     function transferUSDC(address to, uint256 amount) external {
-        require(
-            msg.sender == tokenAddress,
-            "This address is not allowed to interact with the contract"
-        );
+        require(msg.sender == apex, "!apex");
         IERC20(usdc).safeTransfer(to, amount);
     }
 
     function swapTokensForUSDC(uint256 tokens) external {
-        require(
-            msg.sender == tokenAddress,
-            "This address is not allowed to interact with the contract"
-        );
+        require(msg.sender == apex, "!apex");
         address[] memory path = new address[](2);
-        path[0] = address(tokenAddress);
+        path[0] = apex;
         path[1] = usdc;
 
-        IERC20(tokenAddress).approve(address(uniswapV2Router), tokens);
+        IERC20(apex).approve(address(uniswapV2Router), tokens);
         uniswapV2Router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             tokens,
             0, // accept any amount of usdc
@@ -77,15 +71,12 @@ contract TokenStorage is ITokenStorage {
     }
 
     function addLiquidity(uint256 tokens, uint256 usdcs) external {
-        require(
-            msg.sender == tokenAddress,
-            "This address is not allowed to interact with the contract"
-        );
-        IERC20(tokenAddress).approve(address(uniswapV2Router), tokens);
+        require(msg.sender == apex, "!apex");
+        IERC20(apex).approve(address(uniswapV2Router), tokens);
         IERC20(usdc).approve(address(uniswapV2Router), usdcs);
 
         uniswapV2Router.addLiquidity(
-            address(tokenAddress),
+            apex,
             usdc,
             tokens,
             usdcs,
@@ -100,10 +91,7 @@ contract TokenStorage is ITokenStorage {
         uint256 swapTokensDividends,
         uint256 usdcDividends
     ) external {
-        require(
-            msg.sender == tokenAddress,
-            "This address is not allowed to interact with the contract"
-        );
+        require(msg.sender == apex, "!apex");
         IERC20(usdc).approve(address(dividendTracker), usdcDividends);
         try dividendTracker.distributeDividends(usdcDividends) {
             emit SendDividends(swapTokensDividends, usdcDividends);
@@ -113,10 +101,7 @@ contract TokenStorage is ITokenStorage {
     }
 
     function setLiquidityWallet(address _liquidityWallet) external {
-        require(
-            msg.sender == tokenAddress,
-            "This address is not allowed to interact with the contract"
-        );
+        require(msg.sender == apex, "!apex");
         require(_liquidityWallet != address(0), "Digits: zero!");
 
         liquidityWallet = _liquidityWallet;
