@@ -10,9 +10,12 @@ interface IAlphaApexDAO {
     event ExcludeFromFees(address indexed account, bool isExcluded);
     event SetAutomatedMarketMakerPair(address indexed pair, bool indexed value);
     event SetFee(
-        uint256 _treasuryFee,
-        uint256 _liquidityFee,
-        uint256 _dividendFee
+        uint256 _treasuryFeeBuy,
+        uint256 _liquidityFeeBuy,
+        uint256 _dividendFeeBuy,
+        uint256 _treasuryFeeSell,
+        uint256 _liquidityFeeSell,
+        uint256 _dividendFeeSell
     );
     event SwapEnabled(bool enabled);
     event TaxEnabled(bool enabled);

@@ -16,4 +16,8 @@ interface ITokenStorage {
     ) external;
 
     function setLiquidityWallet(address _liquidityWallet) external;
+    
+    function addFee(bool isBuy, uint256 fee) external;
+    function feesBuy() external view returns (uint256);
+    function feesSell() external view returns (uint256);
 }

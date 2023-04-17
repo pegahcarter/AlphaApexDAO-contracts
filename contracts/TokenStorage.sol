@@ -21,6 +21,9 @@ contract TokenStorage is ITokenStorage {
     address public immutable apex;
     address public liquidityWallet;
 
+    uint256 public feesBuy;
+    uint256 public feesSell;
+
     constructor(
         address _usdc,
         address _apex,
@@ -68,6 +71,10 @@ contract TokenStorage is ITokenStorage {
             address(this),
             block.timestamp
         );
+
+        // Now that tokens have been swapped - reset fee accrual
+        feesBuy = 0;
+        feesSell = 0;
     }
 
     function addLiquidity(uint256 tokens, uint256 usdcs) external {
@@ -85,6 +92,15 @@ contract TokenStorage is ITokenStorage {
             liquidityWallet,
             block.timestamp
         );
+    }
+
+    function addFee(bool isBuy, uint256 fee) external {
+        require(msg.sender == apex, "!apex");
+        if (isBuy) {
+            feesBuy += fee;
+        } else {
+            feesSell += fee;
+        }
     }
 
     function distributeDividends(

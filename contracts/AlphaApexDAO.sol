@@ -28,13 +28,20 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     ITokenStorage public tokenStorage;
 
     address public multiRewards; // Can trigger dividend distribution.
-    address public marketingWallet;
+    address public treasury;
     address public uniswapV2Pair;
 
-    uint256 public treasuryFeeBPS = 700;
-    uint256 public liquidityFeeBPS = 200;
-    uint256 public dividendFeeBPS = 300;
-    uint256 public totalFeeBPS = 1200;
+    uint256 public treasuryFeeBuyBPS = 100;
+    uint256 public liquidityFeeBuyBPS = 50;
+    uint256 public dividendFeeBuyBPS = 50;
+
+    uint256 public treasuryFeeSellBPS = 600;
+    uint256 public liquidityFeeSellBPS = 200;
+    uint256 public dividendFeeSellBPS = 50;
+
+    uint256 public totalFeeBuyBPS;
+    uint256 public totalFeeSellBPS;
+
     uint256 public swapTokensAtAmount = 100000 * (10**18);
     uint256 public lastSwapTime;
 
@@ -56,17 +63,17 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     constructor(
         address _usdc,
         address _uniswapRouter,
-        address _marketingWallet
+        address _treasury
     ) {
         require(_usdc != address(0), "USDC address zero");
         require(_uniswapRouter != address(0), "Uniswap router address zero");
         require(
-            _marketingWallet != address(0),
-            "Marketing wallet address zero"
+            _treasury != address(0),
+            "Treasury address zero"
         );
 
         usdc = IERC20(_usdc);
-        marketingWallet = _marketingWallet;
+        treasury = _treasury;
 
         uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
         uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(
@@ -93,6 +100,9 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         excludeFromFees(address(dividendTracker), true);
 
         _mint(owner(), 1_000_000_000 * 1e18);
+        
+        totalFeeBuyBPS = treasuryFeeBuyBPS + liquidityFeeBuyBPS + dividendFeeBuyBPS;
+        totalFeeSellBPS = treasuryFeeSellBPS + liquidityFeeSellBPS + dividendFeeSellBPS;
     }
 
     /* ============ External View Functions ============ */
@@ -289,13 +299,15 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
             swapping = false;
         }
 
-        bool takeFee = false;
+        bool takeFee;
+        bool isBuy;
 
         if (
             sender == address(uniswapV2Pair) ||
             recipient == address(uniswapV2Pair)
         ) {
             takeFee = true;
+            isBuy = sender == address(uniswapV2Pair);
         }
 
         if (_isExcludedFromFees[sender] || _isExcludedFromFees[recipient]) {
@@ -307,9 +319,12 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         }
 
         if (takeFee) {
-            uint256 fees = (amount * totalFeeBPS) / 10000;
-            amount -= fees;
-            _executeTransfer(sender, address(tokenStorage), fees);
+            uint256 fee = isBuy ? 
+                amount * (treasuryFeeBuyBPS + liquidityFeeBuyBPS + dividendFeeBuyBPS) / 10_000 :
+                amount * (treasuryFeeSellBPS + liquidityFeeSellBPS + dividendFeeSellBPS) / 10_000;
+            amount -= fee;
+            _executeTransfer(sender, address(tokenStorage), fee);
+            tokenStorage.addFee(isBuy, fee);
         }
 
         _executeTransfer(sender, recipient, amount);
@@ -348,27 +363,57 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         emit Transfer(address(0), account, amount);
     }
 
+    /// @dev Apply the ratio of buy to sell fees accumulated to each fee rate to
+    ///         determine the "actual" fee rate
+    function _calcSwapTokens(
+        uint256 tokens,
+        uint256 buyToSellRatio,
+        uint256 sellToBuyRatio,
+        uint256 buyFeeBPS,
+        uint256 sellFeeBPS
+    ) private view returns (uint256 swapTokens) {
+        uint256 tokensFeeBuy = tokens * buyToSellRatio * buyFeeBPS / totalFeeBuyBPS / 1e18;
+        uint256 tokensFeeSell = tokens * sellToBuyRatio * sellFeeBPS / totalFeeSellBPS / 1e18;
+        swapTokens = tokensFeeBuy + tokensFeeSell;
+    }
+
     function _executeSwap(uint256 tokens, uint256 usdcs) private {
         if (tokens == 0) {
             return;
         }
 
-        uint256 swapTokensMarketing = 0;
-        if (address(marketingWallet) != address(0) && totalFeeBPS > 0) {
-            swapTokensMarketing = (tokens * treasuryFeeBPS) / totalFeeBPS;
+        uint256 buyToSellRatio = 1e18 * tokenStorage.feesBuy() / 
+            (tokenStorage.feesBuy() + tokenStorage.feesSell());
+        uint256 sellToBuyRatio = 1e18 - buyToSellRatio;
+
+        uint256 swapTokensTreasury;
+        if (treasury != address(0) && treasuryFeeBuyBPS + treasuryFeeSellBPS > 0) {
+            swapTokensTreasury = _calcSwapTokens(
+                tokens,
+                buyToSellRatio,
+                sellToBuyRatio,
+                treasuryFeeBuyBPS,
+                treasuryFeeSellBPS
+            );
         }
 
-        uint256 swapTokensDividends = 0;
-        if (dividendTracker.totalSupply() > 0 && totalFeeBPS > 0) {
-            swapTokensDividends = (tokens * dividendFeeBPS) / totalFeeBPS;
+        uint256 swapTokensDividends;
+        if (dividendTracker.totalSupply() > 0 && dividendFeeBuyBPS + dividendFeeSellBPS > 0) {
+            swapTokensDividends = _calcSwapTokens(
+                tokens,
+                buyToSellRatio,
+                sellToBuyRatio,
+                dividendFeeBuyBPS,
+                dividendFeeSellBPS
+            );
         }
 
         uint256 tokensForLiquidity = tokens -
-            swapTokensMarketing -
+            swapTokensTreasury -
             swapTokensDividends;
         uint256 swapTokensLiquidity = tokensForLiquidity / 2;
         uint256 addTokensLiquidity = tokensForLiquidity - swapTokensLiquidity;
-        uint256 swapTokensTotal = swapTokensMarketing +
+        uint256 swapTokensTotal = swapTokensTreasury +
             swapTokensDividends +
             swapTokensLiquidity;
 
@@ -377,14 +422,14 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         uint256 usdcSwapped = (usdc.balanceOf(address(tokenStorage)) -
             initUSDCBal) + usdcs;
 
-        uint256 usdcMarketing = (usdcSwapped * swapTokensMarketing) /
+        uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
             swapTokensTotal;
         uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
             swapTokensTotal;
-        uint256 usdcLiquidity = usdcSwapped - usdcMarketing - usdcDividends;
+        uint256 usdcLiquidity = usdcSwapped - usdcTreasury - usdcDividends;
 
-        if (usdcMarketing > 0) {
-            tokenStorage.transferUSDC(marketingWallet, usdcMarketing);
+        if (usdcTreasury > 0) {
+            tokenStorage.transferUSDC(treasury, usdcTreasury);
         }
 
         tokenStorage.addLiquidity(addTokensLiquidity, usdcLiquidity);
@@ -430,14 +475,14 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         emit SetTokenStorage(_tokenStorage);
     }
 
-    function setWallet(address _marketingWallet, address _liquidityWallet)
+    function setWallet(address _treasury, address _liquidityWallet)
         external
         onlyOwner
     {
-        require(_marketingWallet != address(0), "Apex: zero!");
+        require(_treasury != address(0), "Apex: zero!");
         require(_liquidityWallet != address(0), "Apex: zero!");
 
-        marketingWallet = _marketingWallet;
+        treasury = _treasury;
         tokenStorage.setLiquidityWallet(_liquidityWallet);
     }
 
@@ -450,21 +495,37 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     }
 
     function setFee(
-        uint256 _treasuryFee,
-        uint256 _liquidityFee,
-        uint256 _dividendFee
+        uint256 _treasuryFeeBuy,
+        uint256 _liquidityFeeBuy,
+        uint256 _dividendFeeBuy,
+        uint256 _treasuryFeeSell,
+        uint256 _liquidityFeeSell,
+        uint256 _dividendFeeSell
     ) external onlyOwner {
         require(
-            _treasuryFee <= 800 && _liquidityFee <= 800 && _dividendFee <= 800,
+            _treasuryFeeBuy <= 800 && _liquidityFeeBuy <= 800 && _dividendFeeBuy <= 800 &&
+            _treasuryFeeSell <= 800 && _liquidityFeeSell <= 800 && _dividendFeeSell <= 800,
             "Each fee must be below 8%"
         );
 
-        treasuryFeeBPS = _treasuryFee;
-        liquidityFeeBPS = _liquidityFee;
-        dividendFeeBPS = _dividendFee;
-        totalFeeBPS = _treasuryFee + _liquidityFee + _dividendFee;
+        treasuryFeeBuyBPS = _treasuryFeeBuy;
+        liquidityFeeBuyBPS = _liquidityFeeBuy;
+        dividendFeeBuyBPS = _dividendFeeBuy;
+        totalFeeBuyBPS = _treasuryFeeBuy + _liquidityFeeBuy + _dividendFeeBuy;
 
-        emit SetFee(_treasuryFee, _liquidityFee, _dividendFee);
+        treasuryFeeBuyBPS = _treasuryFeeSell;
+        liquidityFeeSellBPS = _liquidityFeeSell;
+        dividendFeeSellBPS = _dividendFeeSell;
+        totalFeeSellBPS = _treasuryFeeSell + _liquidityFeeSell + _dividendFeeSell;
+
+        emit SetFee(
+            _treasuryFeeBuy,
+            _liquidityFeeBuy,
+            _dividendFeeBuy,
+            _treasuryFeeBuy,
+            _liquidityFeeBuy,
+            _dividendFeeBuy
+        );
     }
 
     function setSwapEnabled(bool _enabled) external onlyOwner {

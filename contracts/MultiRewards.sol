@@ -232,7 +232,7 @@ contract MultiRewards is Ownable, ReentrancyGuard {
             rewardData[tokenAddress].lastUpdateTime == 0,
             "Cannot withdraw reward token"
         );
-        IERC20(tokenAddress).safeTransfer(owner, tokenAmount);
+        IERC20(tokenAddress).safeTransfer(owner(), tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
 

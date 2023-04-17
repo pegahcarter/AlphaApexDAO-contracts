@@ -316,7 +316,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
             address[] memory path = new address[](2);
             path[0] = usdc;
-            path[1] = address(apex);
+            path[1] = apex;
 
             bool success = false;
             uint256 tokens = 0;
