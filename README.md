@@ -8,10 +8,10 @@
 * [x] Add logic for buy orders
 * [x] Add logic for sell orders
 * [ ] Setup
-    * [ ] Configure initial distribution recipients and amounts 
-    * [ ] Determine `minTokenBalanceForDividends`
-    * [ ] Determine `swapTokensAtAmount`
-    * [ ] Should fee rates be configurable?
+    * [x] Configure initial distribution recipients and amounts - all to msig (TODO: address to receive)
+    * [x] Determine `minTokenBalanceForDividends`
+    * [x] Determine `swapTokensAtAmount`
+    * [x] Should fee rates be configurable?
 * [ ] Validate Dividends/MultiRewards logic does not round from USDC decimals
 
 * [ ] Safemath

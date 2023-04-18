@@ -42,7 +42,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     uint256 public totalFeeBuyBPS;
     uint256 public totalFeeSellBPS;
 
-    uint256 public swapTokensAtAmount = 100000 * (10**18);
+    uint256 public swapTokensAtAmount = 100_000 * (10**18);
     uint256 public lastSwapTime;
 
     bool public swapAllToken = true;
@@ -492,40 +492,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     {
         require(pair != uniswapV2Pair, "Apex: LP can not be removed");
         _setAutomatedMarketMakerPair(pair, value);
-    }
-
-    function setFee(
-        uint256 _treasuryFeeBuy,
-        uint256 _liquidityFeeBuy,
-        uint256 _dividendFeeBuy,
-        uint256 _treasuryFeeSell,
-        uint256 _liquidityFeeSell,
-        uint256 _dividendFeeSell
-    ) external onlyOwner {
-        require(
-            _treasuryFeeBuy <= 800 && _liquidityFeeBuy <= 800 && _dividendFeeBuy <= 800 &&
-            _treasuryFeeSell <= 800 && _liquidityFeeSell <= 800 && _dividendFeeSell <= 800,
-            "Each fee must be below 8%"
-        );
-
-        treasuryFeeBuyBPS = _treasuryFeeBuy;
-        liquidityFeeBuyBPS = _liquidityFeeBuy;
-        dividendFeeBuyBPS = _dividendFeeBuy;
-        totalFeeBuyBPS = _treasuryFeeBuy + _liquidityFeeBuy + _dividendFeeBuy;
-
-        treasuryFeeBuyBPS = _treasuryFeeSell;
-        liquidityFeeSellBPS = _liquidityFeeSell;
-        dividendFeeSellBPS = _dividendFeeSell;
-        totalFeeSellBPS = _treasuryFeeSell + _liquidityFeeSell + _dividendFeeSell;
-
-        emit SetFee(
-            _treasuryFeeBuy,
-            _liquidityFeeBuy,
-            _dividendFeeBuy,
-            _treasuryFeeBuy,
-            _liquidityFeeBuy,
-            _dividendFeeBuy
-        );
     }
 
     function setSwapEnabled(bool _enabled) external onlyOwner {
