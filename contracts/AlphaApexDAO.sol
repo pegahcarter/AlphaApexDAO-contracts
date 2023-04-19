@@ -97,7 +97,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         excludeFromFees(address(this), true);
         excludeFromFees(address(dividendTracker), true);
 
-        _mint(owner(), 1_000_000_000 * 1e18);
+        _mint(treasury, 1_000_000_000 * 1e18);
         
         totalFeeBuyBPS = treasuryFeeBuyBPS + liquidityFeeBuyBPS + dividendFeeBuyBPS;
         totalFeeSellBPS = treasuryFeeSellBPS + liquidityFeeSellBPS + dividendFeeSellBPS;
@@ -105,15 +105,15 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
     /* ============ External View Functions ============ */
 
-    function name() external view returns (string memory) {
+    function name() public view virtual returns (string memory) {
         return _name;
     }
 
-    function symbol() external view returns (string memory) {
+    function symbol() public view virtual returns (string memory) {
         return _symbol;
     }
 
-    function decimals() external view returns (uint8) {
+    function decimals() public view virtual returns (uint8) {
         return 18;
     }
 
@@ -440,16 +440,16 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         }
     }
 
-    function _setAutomatedMarketMakerPair(address pair, bool value) private {
+    function _setAutomatedMarketMakerPair(address _pair, bool value) private {
         require(
-            automatedMarketMakerPairs[pair] != value,
+            automatedMarketMakerPairs[_pair] != value,
             "Apex: AMM pair is same value"
         );
-        automatedMarketMakerPairs[pair] = value;
+        automatedMarketMakerPairs[_pair] = value;
         if (value) {
-            dividendTracker.excludeFromDividends(pair, true);
+            dividendTracker.excludeFromDividends(_pair, true);
         }
-        emit SetAutomatedMarketMakerPair(pair, value);
+        emit SetAutomatedMarketMakerPair(_pair, value);
     }
 
     /* ============ External Owner Functions ============ */
@@ -471,12 +471,12 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         emit SetTokenStorage(_tokenStorage);
     }
 
-    function setAutomatedMarketMakerPair(address pair, bool value)
+    function setAutomatedMarketMakerPair(address _pair, bool value)
         external
         onlyOwner
     {
-        require(pair != pair, "Apex: LP can not be removed");
-        _setAutomatedMarketMakerPair(pair, value);
+        require(_pair != pair, "Apex: LP can not be removed");
+        _setAutomatedMarketMakerPair(_pair, value);
     }
 
     function setCompoundingEnabled(bool _enabled) external onlyOwner {
