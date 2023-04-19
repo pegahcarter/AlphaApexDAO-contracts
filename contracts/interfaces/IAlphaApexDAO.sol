@@ -18,11 +18,9 @@ interface IAlphaApexDAO {
         uint256 _dividendFeeSell
     );
     event SwapEnabled(bool enabled);
-    event TaxEnabled(bool enabled);
     event CompoundingEnabled(bool enabled);
     event SetTokenStorage(address _tokenStorage);
     event UpdateDividendSettings(
-        bool _swapEnabled,
         uint256 _swapTokensAtAmount,
         bool _swapAllToken
     );

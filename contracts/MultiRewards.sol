@@ -56,7 +56,6 @@ contract MultiRewards is Ownable, ReentrancyGuard {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
-        address _owner,
         address _stakingToken,
         address _reflectionToken
     ) {

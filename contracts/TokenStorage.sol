@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 
 import { IERC20} from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20} from  "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IUniswapV2Router02} from  "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import { ICamelotRouter } from "./interfaces/ICamelotRouter.sol";
 
 import { IDividendTracker} from  "./interfaces/IDividendTracker.sol";
 import { ITokenStorage} from  "./interfaces/ITokenStorage.sol";
@@ -15,7 +15,7 @@ contract TokenStorage is ITokenStorage {
     /* ============ State ============ */
 
     IDividendTracker public immutable dividendTracker;
-    IUniswapV2Router02 public uniswapV2Router;
+    ICamelotRouter public router;
 
     address public immutable usdc;
     address public immutable apex;
@@ -29,7 +29,7 @@ contract TokenStorage is ITokenStorage {
         address _apex,
         address _liquidityWallet,
         address _dividendTracker,
-        address _uniswapRouter
+        address _router
     ) {
         require(_usdc != address(0), "USDC address zero");
         require(_apex != address(0), "Apex address zero");
@@ -41,13 +41,13 @@ contract TokenStorage is ITokenStorage {
             _dividendTracker != address(0),
             "Dividend tracker address zero"
         );
-        require(_uniswapRouter != address(0), "Uniswap router address zero");
+        require(_router != address(0), "Uniswap router address zero");
 
         usdc = _usdc;
         apex = _apex;
         liquidityWallet = _liquidityWallet;
         dividendTracker = IDividendTracker(_dividendTracker);
-        uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
+        router = ICamelotRouter(_router);
     }
 
     /* ============ External Functions ============ */
@@ -63,12 +63,13 @@ contract TokenStorage is ITokenStorage {
         path[0] = apex;
         path[1] = usdc;
 
-        IERC20(apex).approve(address(uniswapV2Router), tokens);
-        uniswapV2Router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        IERC20(apex).approve(address(router), tokens);
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             tokens,
             0, // accept any amount of usdc
             path,
             address(this),
+            address(0), // referer
             block.timestamp
         );
 
@@ -79,10 +80,10 @@ contract TokenStorage is ITokenStorage {
 
     function addLiquidity(uint256 tokens, uint256 usdcs) external {
         require(msg.sender == apex, "!apex");
-        IERC20(apex).approve(address(uniswapV2Router), tokens);
-        IERC20(usdc).approve(address(uniswapV2Router), usdcs);
+        IERC20(apex).approve(address(router), tokens);
+        IERC20(usdc).approve(address(router), usdcs);
 
-        uniswapV2Router.addLiquidity(
+        router.addLiquidity(
             apex,
             usdc,
             tokens,

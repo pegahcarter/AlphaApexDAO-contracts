@@ -4,8 +4,8 @@ pragma solidity 0.8.10;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
+import "./interfaces/ICamelotRouter.sol";
 import "./interfaces/IDividendTracker.sol";
 
 contract DividendTracker is Ownable, IERC20, IDividendTracker {
@@ -20,7 +20,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
     address public immutable usdc;
     address public immutable apex;
-    IUniswapV2Router02 public immutable uniswapV2Router;
+    ICamelotRouter public immutable router;
 
     uint256 public totalDividendsDistributed;
     uint256 public totalDividendsWithdrawn;
@@ -38,15 +38,15 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     constructor(
         address _usdc,
         address _apex,
-        address _uniswapRouter
+        address _router
     ) {
         require(_usdc != address(0), "USDC address zero");
         require(_apex != address(0), "APEX address zero");
-        require(_uniswapRouter != address(0), "Uniswap router address zero");
+        require(_router != address(0), "Router address zero");
 
         usdc = _usdc;
         apex = _apex;
-        uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
+        router = ICamelotRouter(_router);
     }
 
     /* ============ External Functions ============ */
@@ -323,16 +323,17 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
             uint256 initTokenBal = IERC20(apex).balanceOf(account);
             IERC20(usdc).approve(
-                address(uniswapV2Router),
+                address(router),
                 _withdrawableDividend
             );
             try
-                uniswapV2Router
+                router
                     .swapExactTokensForTokensSupportingFeeOnTransferTokens(
                         _withdrawableDividend,
                         0,
                         path,
                         address(account),
+                        address(0), // referrer
                         block.timestamp
                     )
             {

@@ -2,15 +2,15 @@
 
 pragma solidity 0.8.10;
 
-import { Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import { IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import { IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IUniswapV2Factory } from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import { ICamelotRouter } from "./interfaces/ICamelotRouter.sol";
 
-import { DividendTracker} from "./DividendTracker.sol";
-import { ITokenStorage} from "./interfaces/ITokenStorage.sol";
-import { IAlphaApexDAO} from "./interfaces/IAlphaApexDAO.sol";
+import { DividendTracker } from "./DividendTracker.sol";
+import { ITokenStorage } from "./interfaces/ITokenStorage.sol";
+import { IAlphaApexDAO } from "./interfaces/IAlphaApexDAO.sol";
 
 contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     using SafeERC20 for IERC20;
@@ -23,13 +23,13 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     string private constant _symbol = "APEX";
 
     DividendTracker public immutable dividendTracker;
-    IUniswapV2Router02 public immutable uniswapV2Router;
+    ICamelotRouter public immutable router;
     IERC20 public immutable usdc;
     ITokenStorage public tokenStorage;
 
     address public multiRewards; // Can trigger dividend distribution.
     address public treasury;
-    address public uniswapV2Pair;
+    address public pair;
 
     uint256 public treasuryFeeBuyBPS = 100;
     uint256 public liquidityFeeBuyBPS = 50;
@@ -46,8 +46,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     uint256 public lastSwapTime;
 
     bool public swapAllToken = true;
-    bool public swapEnabled = true;
-    bool public taxEnabled = true;
     bool public compoundingEnabled = true;
 
     mapping(address => bool) public automatedMarketMakerPairs;
@@ -62,11 +60,11 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
     constructor(
         address _usdc,
-        address _uniswapRouter,
+        address _router,
         address _treasury
     ) {
         require(_usdc != address(0), "USDC address zero");
-        require(_uniswapRouter != address(0), "Uniswap router address zero");
+        require(_router != address(0), "Router address zero");
         require(
             _treasury != address(0),
             "Treasury address zero"
@@ -75,8 +73,8 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         usdc = IERC20(_usdc);
         treasury = _treasury;
 
-        uniswapV2Router = IUniswapV2Router02(_uniswapRouter);
-        uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(
+        router = ICamelotRouter(_router);
+        pair = IUniswapV2Factory(router.factory()).createPair(
                 address(this),
                 _usdc
             );
@@ -84,15 +82,15 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         dividendTracker = new DividendTracker(
             _usdc,
             address(this),
-            address(uniswapV2Router)
+            address(router)
         );
 
-        _setAutomatedMarketMakerPair(uniswapV2Pair, true);
+        _setAutomatedMarketMakerPair(pair, true);
 
         dividendTracker.excludeFromDividends(address(dividendTracker), true);
         dividendTracker.excludeFromDividends(address(this), true);
         dividendTracker.excludeFromDividends(owner(), true);
-        dividendTracker.excludeFromDividends(address(uniswapV2Router), true);
+        dividendTracker.excludeFromDividends(address(router), true);
         dividendTracker.excludeFromDividends(address(DEAD), true);
 
         excludeFromFees(owner(), true);
@@ -210,7 +208,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         bool canSwap = contractTokenBalance >= swapTokensAtAmount;
 
         if (
-            swapEnabled && // True
             canSwap && // true
             !swapping // swapping=false !false true
         ) {
@@ -280,11 +277,10 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         bool canSwap = contractTokenBalance >= swapTokensAtAmount;
 
         if (
-            swapEnabled && // True
             canSwap && // true
             !swapping && // swapping=false !false true
             !automatedMarketMakerPairs[sender] && // no swap on remove liquidity step 1 or DEX buy
-            sender != address(uniswapV2Router) && // no swap on remove liquidity step 2
+            sender != address(router) && // no swap on remove liquidity step 2
             sender != owner() &&
             recipient != owner()
         ) {
@@ -303,18 +299,18 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         bool isBuy;
 
         if (
-            sender == address(uniswapV2Pair) ||
-            recipient == address(uniswapV2Pair)
+            sender == address(pair) ||
+            recipient == address(pair)
         ) {
             takeFee = true;
-            isBuy = sender == address(uniswapV2Pair);
+            isBuy = sender == address(pair);
         }
 
         if (_isExcludedFromFees[sender] || _isExcludedFromFees[recipient]) {
             takeFee = false;
         }
 
-        if (swapping || !taxEnabled) {
+        if (swapping ) {
             takeFee = false;
         }
 
@@ -475,33 +471,12 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         emit SetTokenStorage(_tokenStorage);
     }
 
-    function setWallet(address _treasury, address _liquidityWallet)
-        external
-        onlyOwner
-    {
-        require(_treasury != address(0), "Apex: zero!");
-        require(_liquidityWallet != address(0), "Apex: zero!");
-
-        treasury = _treasury;
-        tokenStorage.setLiquidityWallet(_liquidityWallet);
-    }
-
     function setAutomatedMarketMakerPair(address pair, bool value)
         external
         onlyOwner
     {
-        require(pair != uniswapV2Pair, "Apex: LP can not be removed");
+        require(pair != pair, "Apex: LP can not be removed");
         _setAutomatedMarketMakerPair(pair, value);
-    }
-
-    function setSwapEnabled(bool _enabled) external onlyOwner {
-        swapEnabled = _enabled;
-        emit SwapEnabled(_enabled);
-    }
-
-    function setTaxEnabled(bool _enabled) external onlyOwner {
-        taxEnabled = _enabled;
-        emit TaxEnabled(_enabled);
     }
 
     function setCompoundingEnabled(bool _enabled) external onlyOwner {
@@ -511,16 +486,13 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     }
 
     function updateDividendSettings(
-        bool _swapEnabled,
         uint256 _swapTokensAtAmount,
         bool _swapAllToken
     ) external onlyOwner {
-        swapEnabled = _swapEnabled;
         swapTokensAtAmount = _swapTokensAtAmount;
         swapAllToken = _swapAllToken;
 
         emit UpdateDividendSettings(
-            _swapEnabled,
             _swapTokensAtAmount,
             _swapAllToken
         );
