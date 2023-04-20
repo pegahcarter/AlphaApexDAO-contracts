@@ -1,10 +1,9 @@
 # <h1 align="center"> Alpha Apex DAO </h1>
 
 ## TODO
-* [ ] DAI => USDC
+* [x] DAI => USDC
     * [x] rename vars
-    * [ ] set contract addresses
-    * [ ] token rounding check
+    * [x] set contract addresses
 * [x] Add logic for buy orders
 * [x] Add logic for sell orders
 * [ ] Setup
@@ -18,13 +17,12 @@
     * [x] Rmv from MultiRewards
     * [ ] Re-validate math 
 * [x] Rmv max wallet checks
-* [ ] Deployment script
-    * [ ] Test deployment script
 * [ ] Tests
-    * [ ] Deployment checks
-    * [ ] Buy logic
+    * [x] Deployment checks
+    * [x] Buy logic
     * [ ] Sell logic
-    * [ ] transfer logic
+    * [ ] Buy & sell logic
+    * [x] transfer logic
 * [x] Fix imports
 
 This project uses [Foundry](https://getfoundry.sh). See the [book](https://book.getfoundry.sh/getting-started/installation.html) for instructions on how to install and use Foundry.
