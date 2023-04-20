@@ -2,12 +2,12 @@
 
 pragma solidity 0.8.10;
 
-import { IERC20} from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20} from  "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from  "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ICamelotRouter } from "./interfaces/ICamelotRouter.sol";
 
-import { IDividendTracker} from  "./interfaces/IDividendTracker.sol";
-import { ITokenStorage} from  "./interfaces/ITokenStorage.sol";
+import { IDividendTracker } from  "./interfaces/IDividendTracker.sol";
+import { ITokenStorage } from  "./interfaces/ITokenStorage.sol";
 
 contract TokenStorage is ITokenStorage {
     using SafeERC20 for IERC20;

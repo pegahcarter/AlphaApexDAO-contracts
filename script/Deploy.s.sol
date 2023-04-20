@@ -12,9 +12,9 @@ contract Deploy is Script {
     
     uint256 privateKey = vm.envUint("PRIVATE_KEY");
     address publicKey = vm.addr(privateKey);
-    address usdc = vm.envAddress("USDC"); // TODO
-    address uniswapRouter = vm.envAddress("UNISWAP_ROUTER");
-    address treasury = vm.envAddress("TREASURY"); // TODO
+    address usdc = vm.envAddress("USDC");
+    address router = vm.envAddress("ROUTER");
+    address treasury = vm.envAddress("TREASURY");
 
     AlphaApexDAO public apex;
     DividendTracker public dividendTracker;
@@ -24,21 +24,21 @@ contract Deploy is Script {
     function run() public {
         vm.startBroadcast(privateKey);
 
-        // Deploy AlphaApexDAO
-        apex = new AlphaApexDAO(usdc, uniswapRouter, treasury);
+        // Deploy AlphaApexDAO and DividendTracker
+        apex = new AlphaApexDAO(usdc, router, treasury);
+        apex.excludeFromDividends(treasury, true);
 
-        // Deploy TokenStorage
+        // Get deployed DividendTracker address
         dividendTracker = apex.dividendTracker();
-        tokenStorage = new TokenStorage(usdc, address(apex), publicKey, address(dividendTracker), uniswapRouter);
+        
+        // Deploy TokenStorage
+        tokenStorage = new TokenStorage(usdc, address(apex), treasury, address(dividendTracker), router);
         apex.setTokenStorage(address(tokenStorage));
 
         // Deploy MultiRewards
-        multiRewards = new MultiRewards(publicKey, address(apex), usdc);
-
-        // Apex related managed
+        multiRewards = new MultiRewards(address(apex), usdc);
         apex.excludeFromFees(address(multiRewards), true);
         apex.setMultiRewardsAddress(address(multiRewards));
-        apex.updateDividendSettings(true, 1000, true);
 
         vm.stopBroadcast();
     }

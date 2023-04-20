@@ -89,11 +89,10 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
         dividendTracker.excludeFromDividends(address(dividendTracker), true);
         dividendTracker.excludeFromDividends(address(this), true);
-        dividendTracker.excludeFromDividends(owner(), true);
         dividendTracker.excludeFromDividends(address(router), true);
-        dividendTracker.excludeFromDividends(address(DEAD), true);
+        dividendTracker.excludeFromDividends(treasury, true);
+        dividendTracker.excludeFromDividends(DEAD, true);
 
-        excludeFromFees(owner(), true);
         excludeFromFees(address(this), true);
         excludeFromFees(address(dividendTracker), true);
 
