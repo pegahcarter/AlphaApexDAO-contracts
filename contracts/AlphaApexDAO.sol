@@ -37,7 +37,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
     uint256 public treasuryFeeSellBPS = 600;
     uint256 public liquidityFeeSellBPS = 200;
-    uint256 public dividendFeeSellBPS = 50;
+    uint256 public dividendFeeSellBPS = 400;
 
     uint256 public totalFeeBuyBPS;
     uint256 public totalFeeSellBPS;

@@ -6,22 +6,22 @@
     * [x] set contract addresses
 * [x] Add logic for buy orders
 * [x] Add logic for sell orders
-* [ ] Setup
+* [x] Setup
     * [x] Configure initial distribution recipients and amounts - all to msig (TODO: address to receive)
     * [x] Determine `minTokenBalanceForDividends`
     * [x] Determine `swapTokensAtAmount`
     * [x] Should fee rates be configurable?
-* [ ] Validate Dividends/MultiRewards logic does not round from USDC decimals
+* [x] Validate Dividends/MultiRewards logic does not round from USDC decimals
 
 * [ ] Safemath
     * [x] Rmv from MultiRewards
-    * [ ] Re-validate math 
+    * [x] Re-validate math 
 * [x] Rmv max wallet checks
-* [ ] Tests
+* [x] Tests
     * [x] Deployment checks
     * [x] Buy logic
-    * [ ] Sell logic
-    * [ ] Buy & sell logic
+    * [x] Sell logic
+    * [x] Buy & sell logic
     * [x] transfer logic
 * [x] Fix imports
 

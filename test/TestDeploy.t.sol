@@ -150,8 +150,8 @@ contract TestDeploy is Test {
         );
     }
 
-    function testBuyDoesNotTriggerSwapBelowAmount() public {
-        // 2% fee on buy - means at 100/2 swapTokensAtAmount will trigger swap
+    function testBuyDoesNotTriggerDividendsBelowAmount() public {
+        // 2% fee on buy - means at 100/2 swapTokensAtAmount will distribute dividends
         uint256 fee = swapTokensAtAmount - 1;
         uint256 amountSwapped = fee * 100 / 2;
         uint256 amountAfterSwap = amountSwapped - fee;
@@ -170,8 +170,8 @@ contract TestDeploy is Test {
         assertEq(d.tokenStorage().feesBuy(), fee);
     }
 
-    function testSellDoesNotTriggerSwapBelowAmount() public {
-        // 12% fee on sell - means at 100/12 swapTokensAtAmount will trigger swap
+    function testSellDoesNotTriggerDividendsBelowAmount() public {
+        // 12% fee on sell - means at 100/12 swapTokensAtAmount will distribute dividends
         uint256 fee = swapTokensAtAmount - 1;
         uint256 amountSwapped = fee * 100 / 12;
         uint256 amountAfterSwap = amountSwapped - fee;
@@ -190,8 +190,8 @@ contract TestDeploy is Test {
         assertEq(d.tokenStorage().feesSell(), fee);
     }
 
-    function testBuyOnlyTriggerSwap() public {
-        // 2% fee on buy - means at 100/2 swapTokensAtAmount will trigger swap
+    function testBuyOnlyTriggerDividends() public {
+        // 2% fee on buy - means at 100/2 swapTokensAtAmount will distribute dividends
         uint256 amountSwapped = swapTokensAtAmount * 100 / 2;
         
         _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
@@ -256,4 +256,150 @@ contract TestDeploy is Test {
         );
         }
     }
+
+        function testSellOnlyTriggerDividends() public {
+        // 12% fee on Sell - means at 100/12 * swapTokensAtAmount will distribute dividends
+        // This rounds down from solidity so use 100/11 to distribute dividends
+        uint256 amountSwapped = swapTokensAtAmount * 100 / 11;
+        
+        // sell
+        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+
+        // Pre-calculations to be expected from the swap
+        uint256 swapTokensTreasury = swapTokensAtAmount * d.apex().treasuryFeeSellBPS() / d.apex().totalFeeSellBPS();
+        uint256 swapTokensDividends = swapTokensAtAmount * d.apex().dividendFeeSellBPS() / d.apex().totalFeeSellBPS();
+        uint256 tokensForLiquidity = swapTokensAtAmount - swapTokensTreasury - swapTokensDividends;
+        uint256 swapTokensTotal = swapTokensTreasury +
+            swapTokensDividends +
+            tokensForLiquidity / 2;
+
+        uint256 usdcSwapped;
+        {
+        address[] memory path = new address[](2);
+        path[0] = address(usdc);
+        path[1] = address(d.apex());
+        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
+        usdcSwapped = amounts[amounts.length - 1];
+        }
+
+        {
+        uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
+            swapTokensTotal;
+        uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
+            swapTokensTotal;
+
+        uint256 usdcDividendTrackerBefore = usdc.balanceOf(address(d.dividendTracker()));
+        uint256 usdcTreasuryBefore = usdc.balanceOf(treasury);
+        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pair()));
+        uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pair()));
+
+        // Sell occurs - triggering the distribution
+        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+
+        // usdc received by dividend tracker
+        assertEq(
+            usdc.balanceOf(address(d.dividendTracker())) - usdcDividends,
+            usdcDividendTrackerBefore
+        );
+
+        // usdc received by treasury
+        assertEq(
+            usdc.balanceOf(treasury) - usdcTreasury,
+            usdcTreasuryBefore
+        );
+
+        // balance of apex in tokenStorage should only be the amountSwapped since it swapped out the prior amountSwapped
+        assertEq(
+            d.apex().balanceOf(address(d.tokenStorage())),
+            amountSwapped
+        );
+
+        // liquidity added to pair
+        assertGt(
+            usdc.balanceOf(address(d.apex().pair())),
+            usdcPairBefore
+        );
+        assertGt(
+            d.apex().balanceOf(address(d.apex().pair())),
+            apexPairBefore
+        );
+        }
+    }
+
+
+    function testBuyAndSellTriggerDividends() public {
+        // Don't trigger dividends until after a buy and sell occur to calculate the proportion of dividends correctly distributed
+        // A 2% fee on buy means dividends distribute at 100/2 * swapTokensAtAmount or 50x.  For sake of rounding let's use 40x
+        // as we know the dividends won't distribute until the third swap
+        uint256 amountSwapped = swapTokensAtAmount * 40;
+
+        // buy
+        _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
+        // sell
+        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+
+        uint256 swapTokensTreasury = 
+            swapTokensAtAmount * d.apex().treasuryFeeBuyBPS() / d.apex().totalFeeBuyBPS() + 
+            swapTokensAtAmount * d.apex().treasuryFeeSellBPS() / d.apex().totalFeeSellBPS();
+        uint256 swapTokensDividends =
+            swapTokensAtAmount * d.apex().dividendFeeBuyBPS() / d.apex().totalFeeBuyBPS() +
+            swapTokensAtAmount * d.apex().dividendFeeSellBPS() / d.apex().totalFeeSellBPS();
+        uint256 tokensForLiquidity = swapTokensAtAmount - swapTokensTreasury - swapTokensDividends;
+        uint256 swapTokensTotal = swapTokensTreasury +
+            swapTokensDividends +
+            tokensForLiquidity / 2;
+        
+        uint256 usdcSwapped;
+        {
+        address[] memory path = new address[](2);
+        path[0] = address(usdc);
+        path[1] = address(d.apex());
+        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
+        usdcSwapped = amounts[amounts.length - 1];
+        }
+
+        {
+        uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
+            swapTokensTotal;
+        uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
+            swapTokensTotal;
+
+        uint256 usdcDividendTrackerBefore = usdc.balanceOf(address(d.dividendTracker()));
+        uint256 usdcTreasuryBefore = usdc.balanceOf(treasury);
+        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pair()));
+        uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pair()));
+
+        // Sell occurs - triggering the distribution
+        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+
+        // usdc received by dividend tracker
+        assertEq(
+            usdc.balanceOf(address(d.dividendTracker())) - usdcDividends,
+            usdcDividendTrackerBefore
+        );
+
+        // usdc received by treasury
+        assertEq(
+            usdc.balanceOf(treasury) - usdcTreasury,
+            usdcTreasuryBefore
+        );
+
+        // balance of apex in tokenStorage should only be the amountSwapped since it swapped out the prior amountSwapped
+        assertEq(
+            d.apex().balanceOf(address(d.tokenStorage())),
+            amountSwapped
+        );
+
+        // liquidity added to pair
+        assertGt(
+            usdc.balanceOf(address(d.apex().pair())),
+            usdcPairBefore
+        );
+        assertGt(
+            d.apex().balanceOf(address(d.apex().pair())),
+            apexPairBefore
+        );
+        }
+    }
+
 }
