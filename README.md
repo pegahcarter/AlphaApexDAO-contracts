@@ -28,7 +28,7 @@
 ### TODO: for Uniswap v3
 * [ ] Conversion from v2 to v3 interface
     * [x] Contract addresses
-    * [ ] Interface/library imports
+    * [x] Interface/library imports
     * [ ] Create a pool
         * [ ] Test
     * [ ] Swap tokens

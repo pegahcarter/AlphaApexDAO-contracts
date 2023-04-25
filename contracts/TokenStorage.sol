@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 
 import { IERC20 } from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from  "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ICamelotRouter } from "./interfaces/ICamelotRouter.sol";
+import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 import { IDividendTracker } from  "./interfaces/IDividendTracker.sol";
 import { ITokenStorage } from  "./interfaces/ITokenStorage.sol";
@@ -15,7 +15,7 @@ contract TokenStorage is ITokenStorage {
     /* ============ State ============ */
 
     IDividendTracker public immutable dividendTracker;
-    ICamelotRouter public router;
+    ISwapRouter public router;
 
     address public immutable usdc;
     address public immutable apex;
@@ -47,7 +47,7 @@ contract TokenStorage is ITokenStorage {
         apex = _apex;
         liquidityWallet = _liquidityWallet;
         dividendTracker = IDividendTracker(_dividendTracker);
-        router = ICamelotRouter(_router);
+        router = ISwapRouter(_router);
     }
 
     /* ============ External Functions ============ */
@@ -64,14 +64,14 @@ contract TokenStorage is ITokenStorage {
         path[1] = usdc;
 
         IERC20(apex).approve(address(router), tokens);
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            tokens,
-            0, // accept any amount of usdc
-            path,
-            address(this),
-            address(0), // referer
-            block.timestamp
-        );
+        // router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        //     tokens,
+        //     0, // accept any amount of usdc
+        //     path,
+        //     address(this),
+        //     address(0), // referer
+        //     block.timestamp
+        // );
 
         // Now that tokens have been swapped - reset fee accrual
         feesBuy = 0;
@@ -83,16 +83,16 @@ contract TokenStorage is ITokenStorage {
         IERC20(apex).approve(address(router), tokens);
         IERC20(usdc).approve(address(router), usdcs);
 
-        router.addLiquidity(
-            apex,
-            usdc,
-            tokens,
-            usdcs,
-            0, // slippage unavoidable
-            0, // slippage unavoidable
-            liquidityWallet,
-            block.timestamp
-        );
+        // router.addLiquidity(
+        //     apex,
+        //     usdc,
+        //     tokens,
+        //     usdcs,
+        //     0, // slippage unavoidable
+        //     0, // slippage unavoidable
+        //     liquidityWallet,
+        //     block.timestamp
+        // );
     }
 
     function addFee(bool isBuy, uint256 fee) external {

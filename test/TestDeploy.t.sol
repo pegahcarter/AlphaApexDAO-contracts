@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
 import { Deploy } from "../script/Deploy.s.sol";
-import { ICamelotRouter } from "contracts/interfaces/ICamelotRouter.sol";
+import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import { IERC20 } from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
@@ -17,7 +17,7 @@ contract TestDeploy is Test {
     uint256 privateKey = vm.envUint("PRIVATE_KEY");
     address publicKey = vm.addr(privateKey);
     IERC20 usdc = IERC20(vm.envAddress("USDC"));
-    ICamelotRouter router = ICamelotRouter(vm.envAddress("ROUTER"));
+    ISwapRouter router = ISwapRouter(vm.envAddress("ROUTER"));
     address treasury = vm.envAddress("TREASURY");
     string ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
     uint256 BLOCK_NUMBER = vm.envOr("BLOCK_NUMBER", uint256(0));
@@ -44,16 +44,16 @@ contract TestDeploy is Test {
         d.apex().approve(address(router), initialAPEXLiquidity);
 
         d.apex().excludeFromFees(treasury, true);
-        router.addLiquidity(
-            address(d.apex()),
-            address(usdc),
-            initialAPEXLiquidity,
-            initialUSDCLiquidity,
-            0,
-            0,
-            treasury,
-            block.timestamp
-        );
+        // router.addLiquidity(
+        //     address(d.apex()),
+        //     address(usdc),
+        //     initialAPEXLiquidity,
+        //     initialUSDCLiquidity,
+        //     0,
+        //     0,
+        //     treasury,
+        //     block.timestamp
+        // );
         d.apex().excludeFromFees(treasury, false);
     }
 
@@ -140,14 +140,14 @@ contract TestDeploy is Test {
         path[0] = input;
         path[1] = output;
         vm.prank(from);
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            amount,
-            0,
-            path,
-            recipient,
-            address(0),
-            block.timestamp + 1
-        );
+        // router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        //     amount,
+        //     0,
+        //     path,
+        //     recipient,
+        //     address(0),
+        //     block.timestamp + 1
+        // );
     }
 
     function testBuyDoesNotTriggerDividendsBelowAmount() public {
@@ -209,8 +209,9 @@ contract TestDeploy is Test {
         address[] memory path = new address[](2);
         path[0] = address(usdc);
         path[1] = address(d.apex());
-        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
-        usdcSwapped = amounts[amounts.length - 1];
+        // uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
+        // usdcSwapped = amounts[amounts.length - 1];
+        usdcSwapped = 0;
         }
 
         {
@@ -278,8 +279,9 @@ contract TestDeploy is Test {
         address[] memory path = new address[](2);
         path[0] = address(usdc);
         path[1] = address(d.apex());
-        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
-        usdcSwapped = amounts[amounts.length - 1];
+        // uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
+        // usdcSwapped = amounts[amounts.length - 1];
+        usdcSwapped = 0;
         }
 
         {
@@ -354,8 +356,9 @@ contract TestDeploy is Test {
         address[] memory path = new address[](2);
         path[0] = address(usdc);
         path[1] = address(d.apex());
-        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
-        usdcSwapped = amounts[amounts.length - 1];
+        // uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
+        // usdcSwapped = amounts[amounts.length - 1];
+        usdcSwapped = 0;
         }
 
         {
