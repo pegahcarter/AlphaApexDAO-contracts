@@ -13,7 +13,7 @@
     * [x] Should fee rates be configurable?
 * [x] Validate Dividends/MultiRewards logic does not round from USDC decimals
 
-* [ ] Safemath
+* [x] Safemath
     * [x] Rmv from MultiRewards
     * [x] Re-validate math 
 * [x] Rmv max wallet checks
@@ -24,5 +24,20 @@
     * [x] Buy & sell logic
     * [x] transfer logic
 * [x] Fix imports
+
+### TODO: for Uniswap v3
+* [ ] Conversion from v2 to v3 interface
+    * [x] Contract addresses
+    * [ ] Interface/library imports
+    * [ ] Create a pool
+        * [ ] Test
+    * [ ] Swap tokens
+        * [ ] Test
+* [ ] Liquidity tokens
+    * [ ] Send tokens to unique address ("lp") instead of providing liq
+        * [ ] Test
+    * [ ] Function to change lp address
+        * [ ] Test
+
 
 This project uses [Foundry](https://getfoundry.sh). See the [book](https://book.getfoundry.sh/getting-started/installation.html) for instructions on how to install and use Foundry.
