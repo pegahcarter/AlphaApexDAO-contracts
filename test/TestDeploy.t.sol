@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
 import { Deploy } from "../script/Deploy.s.sol";
 import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import { INonfungiblePositionManager } from "contracts/interfaces/INonfungiblePositionManager.sol";
 import { IERC20 } from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
@@ -22,6 +23,8 @@ contract TestDeploy is Test {
     string ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
     uint256 BLOCK_NUMBER = vm.envOr("BLOCK_NUMBER", uint256(0));
 
+    INonfungiblePositionManager positionManager = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
+
     Deploy public d;
     uint256 initialUSDCLiquidity = 50_000 * 1e6;
     uint256 initialAPEXLiquidity = 5_000_000 * 1e18;
@@ -36,16 +39,36 @@ contract TestDeploy is Test {
         d = new Deploy();
         d.run();
 
+        vm.startPrank(d.apex().owner());
+        d.apex().excludeFromFees(treasury, true);
+        vm.stopPrank();
+
         // impersonate the treasury and add initial liquidity
         deal(address(usdc), treasury, initialUSDCLiquidity);
 
         vm.startPrank(treasury);
-        IERC20(usdc).approve(address(router), initialUSDCLiquidity);
-        d.apex().approve(address(router), initialAPEXLiquidity);
-        vm.stopPrank();
+        IERC20(usdc).approve(address(positionManager), initialUSDCLiquidity);
+        d.apex().approve(address(positionManager), initialAPEXLiquidity);
+        
+        vm.warp(10000000000);
+        vm.roll(10000000000);
 
-        vm.startPrank(d.apex().owner());
-        d.apex().excludeFromFees(treasury, true);
+        INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
+            token0: address(d.apex()),
+            token1: address(usdc),
+            fee: 500,
+            tickLower: -887272, // from v3-core/TickMath
+            tickUpper: 887272,
+            amount0Desired: 100,
+            amount1Desired: 100,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: treasury,
+            deadline: block.timestamp
+        });
+
+        // positionManager.mint(params);
+        vm.stopPrank();
 
         // router.addLiquidity(
         //     address(d.apex()),
@@ -57,6 +80,8 @@ contract TestDeploy is Test {
         //     treasury,
         //     block.timestamp
         // );
+
+        vm.startPrank(d.apex().owner());
         d.apex().excludeFromFees(treasury, false);
         vm.stopPrank();
     }
