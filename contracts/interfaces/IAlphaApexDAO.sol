@@ -8,7 +8,7 @@ interface IAlphaApexDAO {
         uint256 tokensIntoLiquidity
     );
     event ExcludeFromFees(address indexed account, bool isExcluded);
-    event SetAutomatedMarketMakerPair(address indexed pair, bool indexed value);
+    event SetAutomatedMarketMakerPool(address indexed pool, bool indexed value);
     event SetFee(
         uint256 _treasuryFeeBuy,
         uint256 _liquidityFeeBuy,

@@ -26,7 +26,6 @@ contract Deploy is Script {
 
         // Deploy AlphaApexDAO and DividendTracker
         apex = new AlphaApexDAO(usdc, router, treasury);
-        apex.excludeFromDividends(treasury, true);
 
         // Get deployed DividendTracker address
         dividendTracker = apex.dividendTracker();

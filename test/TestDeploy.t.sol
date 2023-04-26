@@ -42,8 +42,11 @@ contract TestDeploy is Test {
         vm.startPrank(treasury);
         IERC20(usdc).approve(address(router), initialUSDCLiquidity);
         d.apex().approve(address(router), initialAPEXLiquidity);
+        vm.stopPrank();
 
+        vm.startPrank(d.apex().owner());
         d.apex().excludeFromFees(treasury, true);
+
         // router.addLiquidity(
         //     address(d.apex()),
         //     address(usdc),
@@ -55,6 +58,7 @@ contract TestDeploy is Test {
         //     block.timestamp
         // );
         d.apex().excludeFromFees(treasury, false);
+        vm.stopPrank();
     }
 
     function testInitialState() public {
@@ -63,11 +67,11 @@ contract TestDeploy is Test {
         assertEq(address(d.apex().router()), address(router));
         assertEq(d.apex().treasury(), treasury);
 
-        assertTrue(address(d.apex().pair()) != address(0));
+        assertTrue(address(d.apex().pool()) != address(0));
         assertTrue(address(d.apex().dividendTracker()) != address(0));
 
-        assertTrue(d.apex().automatedMarketMakerPairs(d.apex().pair()));
-        assertTrue(d.dividendTracker().excludedFromDividends(d.apex().pair()));
+        assertTrue(d.apex().automatedMarketMakerPools(d.apex().pool()));
+        assertTrue(d.dividendTracker().excludedFromDividends(d.apex().pool()));
 
         assertTrue(d.dividendTracker().excludedFromDividends(address(d.dividendTracker())));
         assertTrue(d.dividendTracker().excludedFromDividends(address(d.apex())));
@@ -121,16 +125,17 @@ contract TestDeploy is Test {
     }
 
     function testTransferHasNoFees() public {
-        uint256 amount = 5 * 1e18;
+        uint256 amount = 5;
 
         assertEq(d.apex().balanceOf(alice), 0);
         assertEq(d.apex().balanceOf(bob), 0);
-        
-        vm.prank(treasury);
+
+        vm.startPrank(treasury);
         d.apex().transfer(alice, amount);
         assertEq(d.apex().balanceOf(alice), amount);
+        vm.stopPrank();
 
-        vm.prank(alice);
+        vm.startPrank(alice);
         d.apex().transfer(bob, amount);
         assertEq(d.apex().balanceOf(bob), amount);
     }
@@ -222,8 +227,8 @@ contract TestDeploy is Test {
 
         uint256 usdcDividendTrackerBefore = usdc.balanceOf(address(d.dividendTracker()));
         uint256 usdcTreasuryBefore = usdc.balanceOf(treasury);
-        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pair()));
-        uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pair()));
+        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pool()));
+        uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pool()));
 
         // Buy occurs - triggering the distribution
         _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
@@ -248,11 +253,11 @@ contract TestDeploy is Test {
 
         // liquidity added to pair
         assertGt(
-            usdc.balanceOf(address(d.apex().pair())),
+            usdc.balanceOf(address(d.apex().pool())),
             usdcPairBefore
         );
         assertGt(
-            d.apex().balanceOf(address(d.apex().pair())),
+            d.apex().balanceOf(address(d.apex().pool())),
             apexPairBefore
         );
         }
@@ -292,8 +297,8 @@ contract TestDeploy is Test {
 
         uint256 usdcDividendTrackerBefore = usdc.balanceOf(address(d.dividendTracker()));
         uint256 usdcTreasuryBefore = usdc.balanceOf(treasury);
-        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pair()));
-        uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pair()));
+        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pool()));
+        uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pool()));
 
         // Sell occurs - triggering the distribution
         _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
@@ -318,11 +323,11 @@ contract TestDeploy is Test {
 
         // liquidity added to pair
         assertGt(
-            usdc.balanceOf(address(d.apex().pair())),
+            usdc.balanceOf(address(d.apex().pool())),
             usdcPairBefore
         );
         assertGt(
-            d.apex().balanceOf(address(d.apex().pair())),
+            d.apex().balanceOf(address(d.apex().pool())),
             apexPairBefore
         );
         }
@@ -369,8 +374,8 @@ contract TestDeploy is Test {
 
         uint256 usdcDividendTrackerBefore = usdc.balanceOf(address(d.dividendTracker()));
         uint256 usdcTreasuryBefore = usdc.balanceOf(treasury);
-        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pair()));
-        uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pair()));
+        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pool()));
+        uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pool()));
 
         // Sell occurs - triggering the distribution
         _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
@@ -395,11 +400,11 @@ contract TestDeploy is Test {
 
         // liquidity added to pair
         assertGt(
-            usdc.balanceOf(address(d.apex().pair())),
+            usdc.balanceOf(address(d.apex().pool())),
             usdcPairBefore
         );
         assertGt(
-            d.apex().balanceOf(address(d.apex().pair())),
+            d.apex().balanceOf(address(d.apex().pool())),
             apexPairBefore
         );
         }

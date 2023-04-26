@@ -30,7 +30,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
     address public multiRewards; // Can trigger dividend distribution.
     address public treasury;
-    address public pair;
+    address public pool;
 
     uint256 public treasuryFeeBuyBPS = 100;
     uint256 public liquidityFeeBuyBPS = 50;
@@ -49,7 +49,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     bool public swapAllToken = true;
     bool public compoundingEnabled = true;
 
-    mapping(address => bool) public automatedMarketMakerPairs;
+    mapping(address => bool) public automatedMarketMakerPools;
 
     uint256 private _totalSupply;
 
@@ -74,10 +74,10 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         usdc = IERC20(_usdc);
         treasury = _treasury;
 
-        pair = IUniswapV3Factory(IPeripheryImmutableState(_router).factory()).createPool(
+        pool = IUniswapV3Factory(IPeripheryImmutableState(_router).factory()).createPool(
                 address(this),
                 _usdc,
-                50 // low fee
+                500 // low fee
             );
         router = ISwapRouter(_router);
 
@@ -87,7 +87,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
             address(router)
         );
 
-        _setAutomatedMarketMakerPair(pair, true);
+        _setAutomatedMarketMakerPool(pool, true);
 
         dividendTracker.excludeFromDividends(address(dividendTracker), true);
         dividendTracker.excludeFromDividends(address(this), true);
@@ -280,7 +280,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         if (
             canSwap && // true
             !swapping && // swapping=false !false true
-            !automatedMarketMakerPairs[sender] && // no swap on remove liquidity step 1 or DEX buy
+            !automatedMarketMakerPools[sender] && // no swap on remove liquidity step 1 or DEX buy
             sender != address(router) && // no swap on remove liquidity step 2
             sender != owner() &&
             recipient != owner()
@@ -300,11 +300,11 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         bool isBuy;
 
         if (
-            sender == address(pair) ||
-            recipient == address(pair)
+            sender == address(pool) ||
+            recipient == address(pool)
         ) {
             takeFee = true;
-            isBuy = sender == address(pair);
+            isBuy = sender == address(pool);
         }
 
         if (_isExcludedFromFees[sender] || _isExcludedFromFees[recipient]) {
@@ -441,16 +441,16 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         }
     }
 
-    function _setAutomatedMarketMakerPair(address _pair, bool value) private {
+    function _setAutomatedMarketMakerPool(address _pool, bool value) private {
         require(
-            automatedMarketMakerPairs[_pair] != value,
-            "Apex: AMM pair is same value"
+            automatedMarketMakerPools[_pool] != value,
+            "Apex: AMM pool is same value"
         );
-        automatedMarketMakerPairs[_pair] = value;
+        automatedMarketMakerPools[_pool] = value;
         if (value) {
-            dividendTracker.excludeFromDividends(_pair, true);
+            dividendTracker.excludeFromDividends(_pool, true);
         }
-        emit SetAutomatedMarketMakerPair(_pair, value);
+        emit SetAutomatedMarketMakerPool(_pool, value);
     }
 
     /* ============ External Owner Functions ============ */
@@ -472,12 +472,12 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         emit SetTokenStorage(_tokenStorage);
     }
 
-    function setAutomatedMarketMakerPair(address _pair, bool value)
+    function setAutomatedMarketMakerPool(address _pool, bool value)
         external
         onlyOwner
     {
-        require(_pair != pair, "Apex: LP can not be removed");
-        _setAutomatedMarketMakerPair(_pair, value);
+        require(_pool != pool, "Apex: LP can not be removed");
+        _setAutomatedMarketMakerPool(_pool, value);
     }
 
     function setCompoundingEnabled(bool _enabled) external onlyOwner {
