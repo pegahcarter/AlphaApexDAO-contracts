@@ -31,12 +31,13 @@
     * [x] Interface/library imports
     * [x] Create a pool
         * [ ] Test adding liquidity
-    * [ ] Swap tokens
+    * [x] Swap tokens
         * [ ] Test swap
+        * [ ] Test calculating swap output
 * [ ] Liquidity tokens
-    * [ ] Send tokens to unique address ("lp") instead of providing liq
+    * [x] Send tokens to unique address ("lp") instead of providing liq
         * [ ] Test
     * [x] Function to change lp address
-
+        * [ ] Test
 
 This project uses [Foundry](https://getfoundry.sh). See the [book](https://book.getfoundry.sh/getting-started/installation.html) for instructions on how to install and use Foundry.

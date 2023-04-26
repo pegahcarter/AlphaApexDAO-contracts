@@ -167,19 +167,22 @@ contract TestDeploy is Test {
         assertEq(d.apex().balanceOf(bob), amount);
     }
 
-    function _swap(address from, address input, address output, uint256 amount, address recipient) internal {
-        address[] memory path = new address[](2);
-        path[0] = input;
-        path[1] = output;
+    function _swap(address from, address tokenIn, address tokenOut, uint256 amountIn, address recipient) internal {
+        
+        ISwapRouter.ExactInputSingleParams memory params = 
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: 500, // set poolFee
+                recipient: from,
+                deadline: block.timestamp,
+                amountIn: amountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            });
+
         vm.prank(from);
-        // router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        //     amount,
-        //     0,
-        //     path,
-        //     recipient,
-        //     address(0),
-        //     block.timestamp + 1
-        // );
+        router.exactInputSingle(params);
     }
 
     function testBuyDoesNotTriggerDividendsBelowAmount() public {

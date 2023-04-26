@@ -410,11 +410,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         uint256 tokensForLiquidity = tokens -
             swapTokensTreasury -
             swapTokensDividends;
-        uint256 swapTokensLiquidity = tokensForLiquidity / 2;
-        uint256 addTokensLiquidity = tokensForLiquidity - swapTokensLiquidity;
-        uint256 swapTokensTotal = swapTokensTreasury +
-            swapTokensDividends +
-            swapTokensLiquidity;
+        uint256 swapTokensTotal = tokens - tokensForLiquidity;
 
         uint256 initUSDCBal = usdc.balanceOf(address(tokenStorage));
         tokenStorage.swapTokensForUSDC(swapTokensTotal);
@@ -423,20 +419,11 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
         uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
             swapTokensTotal;
-        uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
-            swapTokensTotal;
-        uint256 usdcLiquidity = usdcSwapped - usdcTreasury - usdcDividends;
+        uint256 usdcDividends = usdcSwapped - usdcTreasury;
 
-        if (usdcTreasury > 0) {
-            tokenStorage.transferUSDC(treasury, usdcTreasury);
+        if (tokensForLiquidity > 0 ) {
+            tokenStorage.transferAPEX(lp, tokensForLiquidity);
         }
-
-        tokenStorage.addLiquidity(addTokensLiquidity, usdcLiquidity);
-        emit SwapAndAddLiquidity(
-            swapTokensLiquidity,
-            usdcLiquidity,
-            addTokensLiquidity
-        );
 
         if (usdcDividends > 0) {
             tokenStorage.distributeDividends(swapTokensDividends, usdcDividends);

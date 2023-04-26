@@ -57,6 +57,11 @@ contract TokenStorage is ITokenStorage {
         IERC20(usdc).safeTransfer(to, amount);
     }
 
+    function transferAPEX(address to, uint256 amount) external {
+        require(msg.sender == apex, "!apex");
+        IERC20(apex).safeTransfer(to, amount);
+    }
+
     function swapTokensForUSDC(uint256 tokens) external {
         require(msg.sender == apex, "!apex");
         address[] memory path = new address[](2);
@@ -64,35 +69,24 @@ contract TokenStorage is ITokenStorage {
         path[1] = usdc;
 
         IERC20(apex).approve(address(router), tokens);
-        // router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        //     tokens,
-        //     0, // accept any amount of usdc
-        //     path,
-        //     address(this),
-        //     address(0), // referer
-        //     block.timestamp
-        // );
+
+        ISwapRouter.ExactInputSingleParams memory params = 
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: apex,
+                tokenOut: usdc,
+                fee: 500, // set poolFee
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: tokens,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            });
+
+        router.exactInputSingle(params);
 
         // Now that tokens have been swapped - reset fee accrual
         feesBuy = 0;
         feesSell = 0;
-    }
-
-    function addLiquidity(uint256 tokens, uint256 usdcs) external {
-        require(msg.sender == apex, "!apex");
-        IERC20(apex).approve(address(router), tokens);
-        IERC20(usdc).approve(address(router), usdcs);
-
-        // router.addLiquidity(
-        //     apex,
-        //     usdc,
-        //     tokens,
-        //     usdcs,
-        //     0, // slippage unavoidable
-        //     0, // slippage unavoidable
-        //     liquidityWallet,
-        //     block.timestamp
-        // );
     }
 
     function addFee(bool isBuy, uint256 fee) external {
