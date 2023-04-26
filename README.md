@@ -29,15 +29,14 @@
 * [ ] Conversion from v2 to v3 interface
     * [x] Contract addresses
     * [x] Interface/library imports
-    * [ ] Create a pool
-        * [ ] Test
+    * [x] Create a pool
+        * [ ] Test adding liquidity
     * [ ] Swap tokens
-        * [ ] Test
+        * [ ] Test swap
 * [ ] Liquidity tokens
     * [ ] Send tokens to unique address ("lp") instead of providing liq
         * [ ] Test
-    * [ ] Function to change lp address
-        * [ ] Test
+    * [x] Function to change lp address
 
 
 This project uses [Foundry](https://getfoundry.sh). See the [book](https://book.getfoundry.sh/getting-started/installation.html) for instructions on how to install and use Foundry.

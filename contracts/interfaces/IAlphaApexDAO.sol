@@ -24,6 +24,7 @@ interface IAlphaApexDAO {
         uint256 _swapTokensAtAmount,
         bool _swapAllToken
     );
+    event SetLP(address _lp_);
 
     function claim() external;
 

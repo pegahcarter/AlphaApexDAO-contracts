@@ -88,9 +88,11 @@ contract TestDeploy is Test {
 
     function testInitialState() public {
         // Deploy AlphaApexDAO  
+        assertEq(d.apex().owner(), publicKey);
         assertEq(address(d.apex().usdc()), address(usdc));
         assertEq(address(d.apex().router()), address(router));
         assertEq(d.apex().treasury(), treasury);
+        assertEq(d.apex().lp(), publicKey);
 
         assertTrue(address(d.apex().pool()) != address(0));
         assertTrue(address(d.apex().dividendTracker()) != address(0));
@@ -434,5 +436,4 @@ contract TestDeploy is Test {
         );
         }
     }
-
 }

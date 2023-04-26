@@ -30,6 +30,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
     address public multiRewards; // Can trigger dividend distribution.
     address public treasury;
+    address public lp; // Address to distribute tokens for liquidity to
     address public pool;
 
     uint256 public treasuryFeeBuyBPS = 100;
@@ -73,6 +74,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
         usdc = IERC20(_usdc);
         treasury = _treasury;
+        lp = msg.sender;
 
         pool = IUniswapV3Factory(IPeripheryImmutableState(_router).factory()).createPool(
                 address(this),
@@ -454,6 +456,14 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     }
 
     /* ============ External Owner Functions ============ */
+
+    function setLP(address _lp) external {
+        require(msg.sender == lp, "!lp");
+        require(_lp != address(0), "Cannot set address zero");
+        require(_lp != lp, "Same address");
+        lp = _lp;
+        emit SetLP(_lp);
+    }
 
     function setMultiRewardsAddress(address _multiRewards) external onlyOwner {
         require(_multiRewards != address(0), "Cannot set address zero");
