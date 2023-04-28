@@ -5,10 +5,7 @@ pragma solidity 0.8.10;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
-import { IPeripheryImmutableState } from "@uniswap/v3-periphery/contracts/interfaces/IPeripheryImmutableState.sol";
-
 import { DividendTracker } from "./DividendTracker.sol";
 import { ITokenStorage } from "./interfaces/ITokenStorage.sol";
 import { IAlphaApexDAO } from "./interfaces/IAlphaApexDAO.sol";
@@ -76,11 +73,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         treasury = _treasury;
         lp = msg.sender;
 
-        pool = IUniswapV3Factory(IPeripheryImmutableState(_router).factory()).createPool(
-                address(this),
-                _usdc,
-                500 // low fee
-            );
         router = ISwapRouter(_router);
 
         dividendTracker = new DividendTracker(
@@ -104,6 +96,13 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         
         totalFeeBuyBPS = treasuryFeeBuyBPS + liquidityFeeBuyBPS + dividendFeeBuyBPS;
         totalFeeSellBPS = treasuryFeeSellBPS + liquidityFeeSellBPS + dividendFeeSellBPS;
+    }
+
+    function setPool(address _pool) external onlyOwner {
+        require(pool == address(0), "Apex: Already set");
+        require(_pool != address(0), "Apex: address(0)");
+        pool = _pool;
+        _setAutomatedMarketMakerPool(pool, true);
     }
 
     /* ============ External View Functions ============ */
