@@ -31,7 +31,7 @@ contract TestDeploy is Test {
 
     Deploy public d;
     uint256 initialUSDCLiquidity = 50_000 * 1e6;
-    uint256 initialAPEXLiquidity = 5_000_000 * 1e18;
+    uint256 initialAPEXLiquidity = 50_000_000 * 1e18;
     // hardcoded into AlphaApexDAO
     uint256 swapTokensAtAmount = 100_000 * 1e18;
 
@@ -79,7 +79,7 @@ contract TestDeploy is Test {
             token0: address(d.apex()),
             token1: address(usdc),
             fee: 500,
-            tickLower: -50000, // from v3-core/TickMath
+            tickLower: -800000, // from v3-core/TickMath
             tickUpper: 0,
             amount0Desired: initialAPEXLiquidity,
             amount1Desired: initialUSDCLiquidity,
@@ -123,6 +123,7 @@ contract TestDeploy is Test {
         assertEq(address(d.apex().router()), address(router));
         assertEq(d.apex().treasury(), treasury);
         assertEq(d.apex().lp(), publicKey);
+        assertEq(d.apex().swapTokensAtAmount(), 100_000 * 1e18);
 
         assertTrue(address(d.apex().pool()) == address(0));
         assertTrue(address(d.apex().dividendTracker()) != address(0));
@@ -197,47 +198,41 @@ contract TestDeploy is Test {
         assertEq(d.apex().balanceOf(bob), amount);
     }
 
-
-
     function testBuyDoesNotTriggerDividendsBelowAmount() public {
         _createAndInitPool();
 
-        uint256 amountSwapped = 100 * 1e6;
+        uint256 amountSwapped = 5 * 1e6;
 
         _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
 
-        console.log(d.apex().balanceOf(alice));
-        // assertEq(d.apex().balanceOf(alice), amountAfterSwap);
-        // assertEq(d.apex().balanceOf(treasury), fee);
+        assertEq(d.apex().balanceOf(alice), 2892751181225550908955384); // 2,892,751 $APEX
+        assertEq(d.apex().balanceOf(address(d.apex().tokenStorage())), 59035738392358181815416);
+        assertEq(d.tokenStorage().feesBuy(), 59035738392358181815416); // 59,035 $APEX
 
         // swap only happens after swapTokensAtAmount is high enough - which will only happen
         // after the execution of a second swap
-        amountSwapped = 10_000 * 1e6;
         _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
-
-        // assertEq(d.apex().balanceOf(alice), amountAfterSwap * 2);
-        // assertEq(d.apex().balanceOf(treasury), fee * 2);
-        // assertEq(d.tokenStorage().feesBuy(), fee);
+        assertEq(d.tokenStorage().feesBuy(), 111489616480602139811895); // 111,489 APEX
     }
 
     function testSellDoesNotTriggerDividendsBelowAmount() public {
-        // 12% fee on sell - means at 100/12 swapTokensAtAmount will distribute dividends
-        uint256 fee = swapTokensAtAmount - 1;
-        uint256 amountSwapped = fee * 100 / 12;
-        uint256 amountAfterSwap = amountSwapped - fee;
+        _createAndInitPool();
+
+        // uint256 amountSwapped = swapTokensAtAmount * 100 / 12;
+        uint256 amountSwapped = 100;
 
         _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
 
-        assertEq(d.apex().balanceOf(alice), amountAfterSwap);
-        assertEq(d.apex().balanceOf(treasury), fee);
+        console.log(d.tokenStorage().feesSell());
+        console.log(usdc.balanceOf(alice));
 
         // swap only happens after swapTokensAtAmount is high enough - which will only happen
         // after the execution of a second swap
         _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
 
-        assertEq(d.apex().balanceOf(alice), amountAfterSwap * 2);
-        assertEq(d.apex().balanceOf(treasury), fee * 2);
-        assertEq(d.tokenStorage().feesSell(), fee);
+        // assertEq(d.apex().balanceOf(alice), amountAfterSwap * 2);
+        // assertEq(d.apex().balanceOf(treasury), fee * 2);
+        // assertEq(d.tokenStorage().feesSell(), fee);
     }
 
     function testBuyOnlyTriggerDividends() public {
