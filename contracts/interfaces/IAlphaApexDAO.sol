@@ -2,8 +2,13 @@
 pragma solidity 0.8.10;
 
 interface IAlphaApexDAO {
+    event SwapAndAddLiquidity(
+        uint256 tokensSwapped,
+        uint256 usdcReceived,
+        uint256 tokensIntoLiquidity
+    );
     event ExcludeFromFees(address indexed account, bool isExcluded);
-    event SetAutomatedMarketMakerPool(address indexed pool, bool indexed value);
+    event SetAutomatedMarketMakerPair(address indexed pair, bool indexed value);
     event SetFee(
         uint256 _treasuryFeeBuy,
         uint256 _liquidityFeeBuy,
@@ -19,7 +24,6 @@ interface IAlphaApexDAO {
         uint256 _swapTokensAtAmount,
         bool _swapAllToken
     );
-    event SetLP(address _lp_);
 
     function claim() external;
 

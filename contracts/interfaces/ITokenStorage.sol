@@ -7,7 +7,8 @@ interface ITokenStorage {
     function swapTokensForUSDC(uint256 tokens) external;
 
     function transferUSDC(address to, uint256 amount) external;
-    function transferAPEX(address to, uint256 amount) external;
+
+    function addLiquidity(uint256 tokens, uint256 usdcs) external;
 
     function distributeDividends(
         uint256 swapTokensDividends,

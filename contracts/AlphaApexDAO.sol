@@ -5,7 +5,9 @@ pragma solidity 0.8.10;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import { IUniswapV2Factory } from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import { ICamelotRouter } from "./interfaces/ICamelotRouter.sol";
+
 import { DividendTracker } from "./DividendTracker.sol";
 import { ITokenStorage } from "./interfaces/ITokenStorage.sol";
 import { IAlphaApexDAO } from "./interfaces/IAlphaApexDAO.sol";
@@ -21,14 +23,13 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     string private constant _symbol = "APEX";
 
     DividendTracker public immutable dividendTracker;
-    ISwapRouter public immutable router;
+    ICamelotRouter public immutable router;
     IERC20 public immutable usdc;
     ITokenStorage public tokenStorage;
 
     address public multiRewards; // Can trigger dividend distribution.
     address public treasury;
-    address public lp; // Address to distribute tokens for liquidity to
-    address public pool;
+    address public pair;
 
     uint256 public treasuryFeeBuyBPS = 100;
     uint256 public liquidityFeeBuyBPS = 50;
@@ -47,7 +48,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     bool public swapAllToken = true;
     bool public compoundingEnabled = true;
 
-    mapping(address => bool) public automatedMarketMakerPools;
+    mapping(address => bool) public automatedMarketMakerPairs;
 
     uint256 private _totalSupply;
 
@@ -71,9 +72,12 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
         usdc = IERC20(_usdc);
         treasury = _treasury;
-        lp = msg.sender;
 
-        router = ISwapRouter(_router);
+        router = ICamelotRouter(_router);
+        pair = IUniswapV2Factory(router.factory()).createPair(
+                address(this),
+                _usdc
+            );
 
         dividendTracker = new DividendTracker(
             _usdc,
@@ -81,7 +85,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
             address(router)
         );
 
-        _setAutomatedMarketMakerPool(pool, true);
+        _setAutomatedMarketMakerPair(pair, true);
 
         dividendTracker.excludeFromDividends(address(dividendTracker), true);
         dividendTracker.excludeFromDividends(address(this), true);
@@ -96,13 +100,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         
         totalFeeBuyBPS = treasuryFeeBuyBPS + liquidityFeeBuyBPS + dividendFeeBuyBPS;
         totalFeeSellBPS = treasuryFeeSellBPS + liquidityFeeSellBPS + dividendFeeSellBPS;
-    }
-
-    function setPool(address _pool) external onlyOwner {
-        require(pool == address(0), "Apex: Already set");
-        require(_pool != address(0), "Apex: address(0)");
-        pool = _pool;
-        _setAutomatedMarketMakerPool(pool, true);
     }
 
     /* ============ External View Functions ============ */
@@ -281,7 +278,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         if (
             canSwap && // true
             !swapping && // swapping=false !false true
-            !automatedMarketMakerPools[sender] && // no swap on remove liquidity step 1 or DEX buy
+            !automatedMarketMakerPairs[sender] && // no swap on remove liquidity step 1 or DEX buy
             sender != address(router) && // no swap on remove liquidity step 2
             sender != owner() &&
             recipient != owner()
@@ -301,11 +298,11 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         bool isBuy;
 
         if (
-            sender == address(pool) ||
-            recipient == address(pool)
+            sender == address(pair) ||
+            recipient == address(pair)
         ) {
             takeFee = true;
-            isBuy = sender == address(pool);
+            isBuy = sender == address(pair);
         }
 
         if (_isExcludedFromFees[sender] || _isExcludedFromFees[recipient]) {
@@ -409,7 +406,11 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         uint256 tokensForLiquidity = tokens -
             swapTokensTreasury -
             swapTokensDividends;
-        uint256 swapTokensTotal = tokens - tokensForLiquidity;
+        uint256 swapTokensLiquidity = tokensForLiquidity / 2;
+        uint256 addTokensLiquidity = tokensForLiquidity - swapTokensLiquidity;
+        uint256 swapTokensTotal = swapTokensTreasury +
+            swapTokensDividends +
+            swapTokensLiquidity;
 
         uint256 initUSDCBal = usdc.balanceOf(address(tokenStorage));
         tokenStorage.swapTokensForUSDC(swapTokensTotal);
@@ -418,38 +419,39 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
         uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
             swapTokensTotal;
-        uint256 usdcDividends = usdcSwapped - usdcTreasury;
+        uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
+            swapTokensTotal;
+        uint256 usdcLiquidity = usdcSwapped - usdcTreasury - usdcDividends;
 
-        if (tokensForLiquidity > 0 ) {
-            tokenStorage.transferAPEX(lp, tokensForLiquidity);
+        if (usdcTreasury > 0) {
+            tokenStorage.transferUSDC(treasury, usdcTreasury);
         }
+
+        tokenStorage.addLiquidity(addTokensLiquidity, usdcLiquidity);
+        emit SwapAndAddLiquidity(
+            swapTokensLiquidity,
+            usdcLiquidity,
+            addTokensLiquidity
+        );
 
         if (usdcDividends > 0) {
             tokenStorage.distributeDividends(swapTokensDividends, usdcDividends);
         }
     }
 
-    function _setAutomatedMarketMakerPool(address _pool, bool value) private {
+    function _setAutomatedMarketMakerPair(address _pair, bool value) private {
         require(
-            automatedMarketMakerPools[_pool] != value,
-            "Apex: AMM pool is same value"
+            automatedMarketMakerPairs[_pair] != value,
+            "Apex: AMM pair is same value"
         );
-        automatedMarketMakerPools[_pool] = value;
+        automatedMarketMakerPairs[_pair] = value;
         if (value) {
-            dividendTracker.excludeFromDividends(_pool, true);
+            dividendTracker.excludeFromDividends(_pair, true);
         }
-        emit SetAutomatedMarketMakerPool(_pool, value);
+        emit SetAutomatedMarketMakerPair(_pair, value);
     }
 
     /* ============ External Owner Functions ============ */
-
-    function setLP(address _lp) external {
-        require(msg.sender == lp, "!lp");
-        require(_lp != address(0), "Cannot set address zero");
-        require(_lp != lp, "Same address");
-        lp = _lp;
-        emit SetLP(_lp);
-    }
 
     function setMultiRewardsAddress(address _multiRewards) external onlyOwner {
         require(_multiRewards != address(0), "Cannot set address zero");
@@ -468,12 +470,12 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         emit SetTokenStorage(_tokenStorage);
     }
 
-    function setAutomatedMarketMakerPool(address _pool, bool value)
+    function setAutomatedMarketMakerPair(address _pair, bool value)
         external
         onlyOwner
     {
-        require(_pool != pool, "Apex: LP can not be removed");
-        _setAutomatedMarketMakerPool(_pool, value);
+        require(_pair != pair, "Apex: LP can not be removed");
+        _setAutomatedMarketMakerPair(_pair, value);
     }
 
     function setCompoundingEnabled(bool _enabled) external onlyOwner {

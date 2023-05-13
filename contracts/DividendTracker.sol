@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "./interfaces/ICamelotRouter.sol";
 import "./interfaces/IDividendTracker.sol";
 
 contract DividendTracker is Ownable, IERC20, IDividendTracker {
@@ -20,7 +20,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
     address public immutable usdc;
     address public immutable apex;
-    ISwapRouter public immutable router;
+    ICamelotRouter public immutable router;
 
     uint256 public totalDividendsDistributed;
     uint256 public totalDividendsWithdrawn;
@@ -46,7 +46,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
         usdc = _usdc;
         apex = _apex;
-        router = ISwapRouter(_router);
+        router = ICamelotRouter(_router);
     }
 
     /* ============ External Functions ============ */
@@ -326,24 +326,24 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
                 address(router),
                 _withdrawableDividend
             );
-            // try
-            //     router
-            //         .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            //             _withdrawableDividend,
-            //             0,
-            //             path,
-            //             address(account),
-            //             address(0), // referrer
-            //             block.timestamp
-            //         )
-            // {
-            //     success = true;
-            //     tokens = IERC20(apex).balanceOf(account) - initTokenBal;
-            // } catch Error(
-            //     string memory /*err*/
-            // ) {
-            //     success = false;
-            // }
+            try
+                router
+                    .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                        _withdrawableDividend,
+                        0,
+                        path,
+                        address(account),
+                        address(0), // referrer
+                        block.timestamp
+                    )
+            {
+                success = true;
+                tokens = IERC20(apex).balanceOf(account) - initTokenBal;
+            } catch Error(
+                string memory /*err*/
+            ) {
+                success = false;
+            }
 
             if (!success) {
                 withdrawnDividends[account] -= _withdrawableDividend;
