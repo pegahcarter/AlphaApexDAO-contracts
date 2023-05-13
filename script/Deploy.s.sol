@@ -12,7 +12,7 @@ contract Deploy is Script {
     
     uint256 privateKey = vm.envUint("PRIVATE_KEY");
     address publicKey = vm.addr(privateKey);
-    address usdc = vm.envAddress("USDC");
+    address weth = vm.envAddress("WETH");
     address router = vm.envAddress("ROUTER");
     address treasury = vm.envAddress("TREASURY");
 
@@ -25,18 +25,18 @@ contract Deploy is Script {
         vm.startBroadcast(privateKey);
 
         // Deploy AlphaApexDAO and DividendTracker
-        apex = new AlphaApexDAO(usdc, router, treasury);
+        apex = new AlphaApexDAO(weth, router, treasury);
         apex.excludeFromDividends(treasury, true);
 
         // Get deployed DividendTracker address
         dividendTracker = apex.dividendTracker();
         
         // Deploy TokenStorage
-        tokenStorage = new TokenStorage(usdc, address(apex), treasury, address(dividendTracker), router);
+        tokenStorage = new TokenStorage(weth, address(apex), treasury, address(dividendTracker), router);
         apex.setTokenStorage(address(tokenStorage));
 
         // Deploy MultiRewards
-        multiRewards = new MultiRewards(address(apex), usdc);
+        multiRewards = new MultiRewards(address(apex), weth);
         apex.excludeFromFees(address(multiRewards), true);
         apex.setMultiRewardsAddress(address(multiRewards));
 

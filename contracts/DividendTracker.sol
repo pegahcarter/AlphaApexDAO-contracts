@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IRouter.sol";
 import "./interfaces/IDividendTracker.sol";
+import "./interfaces/IWETH.sol";
 
 contract DividendTracker is Ownable, IERC20, IDividendTracker {
     using SafeERC20 for IERC20;
@@ -18,7 +19,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     uint256 private constant minTokenBalanceForDividends = 10000 * (10**18);
     uint256 private constant magnitude = 2**128;
 
-    address public immutable usdc;
+    address public immutable weth;
     address public immutable apex;
     IRouter public immutable router;
 
@@ -36,34 +37,34 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
     mapping(address => uint256) private lastClaimTimes;
 
     constructor(
-        address _usdc,
+        address _weth,
         address _apex,
         address _router
     ) {
-        require(_usdc != address(0), "USDC address zero");
+        require(_weth != address(0), "WETH address zero");
         require(_apex != address(0), "APEX address zero");
         require(_router != address(0), "Router address zero");
 
-        usdc = _usdc;
+        weth = _weth;
         apex = _apex;
         router = IRouter(_router);
     }
 
     /* ============ External Functions ============ */
 
-    function distributeDividends(uint256 usdcDividends) external {
+    function distributeDividends(uint256 wethDividends) external {
         require(_totalSupply > 0, "dividends unavailable yet");
-        if (usdcDividends > 0) {
-            IERC20(usdc).safeTransferFrom(
+        if (wethDividends > 0) {
+            IERC20(weth).safeTransferFrom(
                 msg.sender,
                 address(this),
-                usdcDividends
+                wethDividends
             );
             magnifiedDividendPerShare =
                 magnifiedDividendPerShare +
-                ((usdcDividends * magnitude) / _totalSupply);
-            emit DividendsDistributed(msg.sender, usdcDividends);
-            totalDividendsDistributed += usdcDividends;
+                ((wethDividends * magnitude) / _totalSupply);
+            emit DividendsDistributed(msg.sender, wethDividends);
+            totalDividendsDistributed += wethDividends;
         }
     }
 
@@ -193,15 +194,15 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
         return lastClaimTimes[account];
     }
 
-    function name() external view returns (string memory) {
+    function name() external pure returns (string memory) {
         return _name;
     }
 
-    function symbol() external view returns (string memory) {
+    function symbol() external pure returns (string memory) {
         return _symbol;
     }
 
-    function decimals() external view returns (uint8) {
+    function decimals() external pure returns (uint8) {
         return 18;
     }
 
@@ -297,7 +298,11 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
             totalDividendsWithdrawn += _withdrawableDividend;
             emit DividendWithdrawn(account, _withdrawableDividend);
 
-            IERC20(usdc).safeTransfer(account, _withdrawableDividend);
+            // Convert weth to eth and transfer to account
+            IWETH(weth).withdraw(_withdrawableDividend);
+            // safe transfer eth
+            (bool success, ) = account.call{value: _withdrawableDividend}(new bytes(0));
+            require(success, "Safe ETH transfer failed");
 
             return _withdrawableDividend;
         }
@@ -315,13 +320,13 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
             emit DividendWithdrawn(account, _withdrawableDividend);
 
             IRouter.route[] memory routes = new IRouter.route[](1);
-            routes[0] = IRouter.route(usdc, apex, false);
+            routes[0] = IRouter.route(weth, apex, false);
 
             bool success = false;
             uint256 tokens = 0;
 
             uint256 initTokenBal = IERC20(apex).balanceOf(account);
-            IERC20(usdc).approve(
+            IERC20(weth).approve(
                 address(router),
                 _withdrawableDividend
             );

@@ -23,7 +23,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
     DividendTracker public immutable dividendTracker;
     IRouter public immutable router;
-    IERC20 public immutable usdc;
+    IERC20 public immutable weth;
     ITokenStorage public tokenStorage;
 
     address public multiRewards; // Can trigger dividend distribution.
@@ -58,29 +58,29 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     mapping(address => bool) private _isExcludedFromFees;
 
     constructor(
-        address _usdc,
+        address _weth,
         address _router,
         address _treasury
     ) {
-        require(_usdc != address(0), "USDC address zero");
+        require(_weth != address(0), "WETH address zero");
         require(_router != address(0), "Router address zero");
         require(
             _treasury != address(0),
             "Treasury address zero"
         );
 
-        usdc = IERC20(_usdc);
+        weth = IERC20(_weth);
         treasury = _treasury;
 
         router = IRouter(_router);
         pair = IPairFactory(router.factory()).createPair(
                 address(this),
-                _usdc,
+                _weth,
                 false
             );
 
         dividendTracker = new DividendTracker(
-            _usdc,
+            _weth,
             address(this),
             address(router)
         );
@@ -202,7 +202,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
         uint256 contractTokenBalance = balanceOf(address(tokenStorage));
 
-        uint256 contractUSDCBalance = usdc.balanceOf(address(tokenStorage));
+        uint256 contractWETHBalance = weth.balanceOf(address(tokenStorage));
 
         bool canSwap = contractTokenBalance >= swapTokensAtAmount;
 
@@ -215,7 +215,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
             if (!swapAllToken) {
                 contractTokenBalance = swapTokensAtAmount;
             }
-            _executeSwap(contractTokenBalance, contractUSDCBalance);
+            _executeSwap(contractTokenBalance, contractWETHBalance);
 
             lastSwapTime = block.timestamp;
             swapping = false;
@@ -271,7 +271,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         require(senderBalance >= amount, "Apex: transfer exceeds balance");
 
         uint256 contractTokenBalance = balanceOf(address(tokenStorage));
-        uint256 contractUSDCBalance = usdc.balanceOf(address(tokenStorage));
+        uint256 contractWETHBalance = weth.balanceOf(address(tokenStorage));
 
         bool canSwap = contractTokenBalance >= swapTokensAtAmount;
 
@@ -288,7 +288,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
             if (!swapAllToken) {
                 contractTokenBalance = swapTokensAtAmount;
             }
-            _executeSwap(contractTokenBalance, contractUSDCBalance);
+            _executeSwap(contractTokenBalance, contractWETHBalance);
 
             lastSwapTime = block.timestamp;
             swapping = false;
@@ -372,7 +372,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         swapTokens = tokensFeeBuy + tokensFeeSell;
     }
 
-    function _executeSwap(uint256 tokens, uint256 usdcs) private {
+    function _executeSwap(uint256 tokens, uint256 weths) private {
         if (tokens == 0) {
             return;
         }
@@ -412,30 +412,30 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
             swapTokensDividends +
             swapTokensLiquidity;
 
-        uint256 initUSDCBal = usdc.balanceOf(address(tokenStorage));
-        tokenStorage.swapTokensForUSDC(swapTokensTotal);
-        uint256 usdcSwapped = (usdc.balanceOf(address(tokenStorage)) -
-            initUSDCBal) + usdcs;
+        uint256 initWETHBal = weth.balanceOf(address(tokenStorage));
+        tokenStorage.swapTokensForWETH(swapTokensTotal);
+        uint256 wethSwapped = (weth.balanceOf(address(tokenStorage)) -
+            initWETHBal) + weths;
 
-        uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
+        uint256 wethTreasury = (wethSwapped * swapTokensTreasury) /
             swapTokensTotal;
-        uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
+        uint256 wethDividends = (wethSwapped * swapTokensDividends) /
             swapTokensTotal;
-        uint256 usdcLiquidity = usdcSwapped - usdcTreasury - usdcDividends;
+        uint256 wethLiquidity = wethSwapped - wethTreasury - wethDividends;
 
-        if (usdcTreasury > 0) {
-            tokenStorage.transferUSDC(treasury, usdcTreasury);
+        if (wethTreasury > 0) {
+            tokenStorage.transferWETH(treasury, wethTreasury);
         }
 
-        tokenStorage.addLiquidity(addTokensLiquidity, usdcLiquidity);
+        tokenStorage.addLiquidity(addTokensLiquidity, wethLiquidity);
         emit SwapAndAddLiquidity(
             swapTokensLiquidity,
-            usdcLiquidity,
+            wethLiquidity,
             addTokensLiquidity
         );
 
-        if (usdcDividends > 0) {
-            tokenStorage.distributeDividends(swapTokensDividends, usdcDividends);
+        if (wethDividends > 0) {
+            tokenStorage.distributeDividends(swapTokensDividends, wethDividends);
         }
     }
 

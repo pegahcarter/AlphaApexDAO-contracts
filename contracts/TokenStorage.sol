@@ -17,7 +17,7 @@ contract TokenStorage is ITokenStorage {
     IDividendTracker public immutable dividendTracker;
     IRouter public router;
 
-    address public immutable usdc;
+    address public immutable weth;
     address public immutable apex;
     address public liquidityWallet;
 
@@ -25,13 +25,13 @@ contract TokenStorage is ITokenStorage {
     uint256 public feesSell;
 
     constructor(
-        address _usdc,
+        address _weth,
         address _apex,
         address _liquidityWallet,
         address _dividendTracker,
         address _router
     ) {
-        require(_usdc != address(0), "USDC address zero");
+        require(_weth != address(0), "WETH address zero");
         require(_apex != address(0), "Apex address zero");
         require(
             _liquidityWallet != address(0),
@@ -43,7 +43,7 @@ contract TokenStorage is ITokenStorage {
         );
         require(_router != address(0), "Uniswap router address zero");
 
-        usdc = _usdc;
+        weth = _weth;
         apex = _apex;
         liquidityWallet = _liquidityWallet;
         dividendTracker = IDividendTracker(_dividendTracker);
@@ -52,20 +52,20 @@ contract TokenStorage is ITokenStorage {
 
     /* ============ External Functions ============ */
 
-    function transferUSDC(address to, uint256 amount) external {
+    function transferWETH(address to, uint256 amount) external {
         require(msg.sender == apex, "!apex");
-        IERC20(usdc).safeTransfer(to, amount);
+        IERC20(weth).safeTransfer(to, amount);
     }
 
-    function swapTokensForUSDC(uint256 tokens) external {
+    function swapTokensForWETH(uint256 tokens) external {
         require(msg.sender == apex, "!apex");
         IRouter.route[] memory routes = new IRouter.route[](1);
-        routes[0] = IRouter.route(apex, usdc, false);
+        routes[0] = IRouter.route(apex, weth, false);
 
         IERC20(apex).approve(address(router), tokens);
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             tokens,
-            0, // accept any amount of usdc
+            0, // accept any amount of weth
             routes,
             address(this),
             block.timestamp
@@ -76,17 +76,17 @@ contract TokenStorage is ITokenStorage {
         feesSell = 0;
     }
 
-    function addLiquidity(uint256 tokens, uint256 usdcs) external {
+    function addLiquidity(uint256 tokens, uint256 weths) external {
         require(msg.sender == apex, "!apex");
         IERC20(apex).approve(address(router), tokens);
-        IERC20(usdc).approve(address(router), usdcs);
+        IERC20(weth).approve(address(router), weths);
 
         router.addLiquidity(
             apex,
-            usdc,
+            weth,
             false, // stable
             tokens,
-            usdcs,
+            weths,
             0, // slippage unavoidable
             0, // slippage unavoidable
             liquidityWallet,
@@ -105,12 +105,12 @@ contract TokenStorage is ITokenStorage {
 
     function distributeDividends(
         uint256 swapTokensDividends,
-        uint256 usdcDividends
+        uint256 wethDividends
     ) external {
         require(msg.sender == apex, "!apex");
-        IERC20(usdc).approve(address(dividendTracker), usdcDividends);
-        try dividendTracker.distributeDividends(usdcDividends) {
-            emit SendDividends(swapTokensDividends, usdcDividends);
+        IERC20(weth).approve(address(dividendTracker), wethDividends);
+        try dividendTracker.distributeDividends(wethDividends) {
+            emit SendDividends(swapTokensDividends, wethDividends);
         } catch Error(
             string memory /*err*/
         ) {}

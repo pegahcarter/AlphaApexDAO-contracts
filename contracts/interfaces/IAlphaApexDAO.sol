@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.10;
+pragma solidity ^0.8.0;
 
 interface IAlphaApexDAO {
     event SwapAndAddLiquidity(
         uint256 tokensSwapped,
-        uint256 usdcReceived,
+        uint256 wethReceived,
         uint256 tokensIntoLiquidity
     );
     event ExcludeFromFees(address indexed account, bool isExcluded);

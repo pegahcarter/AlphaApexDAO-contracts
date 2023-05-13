@@ -1,7 +1,7 @@
 # <h1 align="center"> Alpha Apex DAO </h1>
 
 ## TODO
-* [x] DAI => USDC
+* [x] DAI => WETH
     * [x] rename vars
     * [x] set contract addresses
 * [x] Add logic for buy orders
@@ -11,7 +11,6 @@
     * [x] Determine `minTokenBalanceForDividends`
     * [x] Determine `swapTokensAtAmount`
     * [x] Should fee rates be configurable?
-* [x] Validate Dividends/MultiRewards logic does not round from USDC decimals
 
 * [ ] Safemath
     * [x] Rmv from MultiRewards

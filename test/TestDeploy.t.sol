@@ -16,14 +16,14 @@ contract TestDeploy is Test {
 
     uint256 privateKey = vm.envUint("PRIVATE_KEY");
     address publicKey = vm.addr(privateKey);
-    IERC20 usdc = IERC20(vm.envAddress("USDC"));
+    IERC20 weth = IERC20(vm.envAddress("WETH"));
     IRouter router = IRouter(vm.envAddress("ROUTER"));
     address treasury = vm.envAddress("TREASURY");
     string ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
     uint256 BLOCK_NUMBER = vm.envOr("BLOCK_NUMBER", uint256(0));
 
     Deploy public d;
-    uint256 initialUSDCLiquidity = 50_000 * 1e6;
+    uint256 initialWETHLiquidity = 50_000 * 1e6;
     uint256 initialAPEXLiquidity = 5_000_000 * 1e18;
     // hardcoded into AlphaApexDAO
     uint256 swapTokensAtAmount = 100_000 * 1e18;
@@ -37,19 +37,19 @@ contract TestDeploy is Test {
         d.run();
 
         // impersonate the treasury and add initial liquidity
-        deal(address(usdc), treasury, initialUSDCLiquidity);
+        deal(address(weth), treasury, initialWETHLiquidity);
 
         vm.startPrank(treasury);
-        IERC20(usdc).approve(address(router), initialUSDCLiquidity);
+        IERC20(weth).approve(address(router), initialWETHLiquidity);
         d.apex().approve(address(router), initialAPEXLiquidity);
 
         d.apex().excludeFromFees(treasury, true);
         router.addLiquidity(
             address(d.apex()),
-            address(usdc),
+            address(weth),
             false,
             initialAPEXLiquidity,
-            initialUSDCLiquidity,
+            initialWETHLiquidity,
             0,
             0,
             treasury,
@@ -60,7 +60,7 @@ contract TestDeploy is Test {
 
     function testInitialState() public {
         // Deploy AlphaApexDAO  
-        assertEq(address(d.apex().usdc()), address(usdc));
+        assertEq(address(d.apex().weth()), address(weth));
         assertEq(address(d.apex().router()), address(router));
         assertEq(d.apex().treasury(), treasury);
 
@@ -97,13 +97,13 @@ contract TestDeploy is Test {
         assertEq(d.apex().totalFeeSellBPS(), 1200);
 
         // Deploy DividendTracker
-        assertEq(d.dividendTracker().usdc(), address(usdc));
+        assertEq(d.dividendTracker().weth(), address(weth));
         assertEq(d.dividendTracker().apex(), address(d.apex()));
         assertEq(address(d.dividendTracker().router()), address(router));
 
         // Deploy TokenStorage
         assertTrue(address(d.tokenStorage()) != address(0));
-        assertEq(d.tokenStorage().usdc(), address(usdc));
+        assertEq(d.tokenStorage().weth(), address(weth));
         assertEq(d.tokenStorage().apex(), address(d.apex()));
         assertEq(d.tokenStorage().liquidityWallet(), treasury);
         assertEq(address(d.tokenStorage().dividendTracker()), address(d.dividendTracker()));
@@ -116,7 +116,7 @@ contract TestDeploy is Test {
         // Deploy MultiRewards
         assertTrue(address(d.multiRewards()) != address(0));
         assertEq(address(d.multiRewards().stakingToken()), address(d.apex()));
-        assertEq(address(d.multiRewards().reflectionToken()), address(usdc));
+        assertEq(address(d.multiRewards().reflectionToken()), address(weth));
         assertTrue(d.apex().isExcludedFromFees(address(d.multiRewards())));
         assertEq(d.apex().multiRewards(), address(d.multiRewards()));
     }
@@ -155,14 +155,14 @@ contract TestDeploy is Test {
         uint256 amountSwapped = fee * 100 / 2;
         uint256 amountAfterSwap = amountSwapped - fee;
 
-        _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
+        _swap(treasury, address(weth), address(d.apex()), amountSwapped, alice);
 
         assertEq(d.apex().balanceOf(alice), amountAfterSwap);
         assertEq(d.apex().balanceOf(treasury), fee);
 
         // swap only happens after swapTokensAtAmount is high enough - which will only happen
         // after the execution of a second swap
-        _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
+        _swap(treasury, address(weth), address(d.apex()), amountSwapped, alice);
 
         assertEq(d.apex().balanceOf(alice), amountAfterSwap * 2);
         assertEq(d.apex().balanceOf(treasury), fee * 2);
@@ -175,14 +175,14 @@ contract TestDeploy is Test {
         uint256 amountSwapped = fee * 100 / 12;
         uint256 amountAfterSwap = amountSwapped - fee;
 
-        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+        _swap(treasury, address(d.apex()), address(weth), amountSwapped, alice);
 
         assertEq(d.apex().balanceOf(alice), amountAfterSwap);
         assertEq(d.apex().balanceOf(treasury), fee);
 
         // swap only happens after swapTokensAtAmount is high enough - which will only happen
         // after the execution of a second swap
-        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+        _swap(treasury, address(d.apex()), address(weth), amountSwapped, alice);
 
         assertEq(d.apex().balanceOf(alice), amountAfterSwap * 2);
         assertEq(d.apex().balanceOf(treasury), fee * 2);
@@ -193,7 +193,7 @@ contract TestDeploy is Test {
         // 2% fee on buy - means at 100/2 swapTokensAtAmount will distribute dividends
         uint256 amountSwapped = swapTokensAtAmount * 100 / 2;
         
-        _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
+        _swap(treasury, address(weth), address(d.apex()), amountSwapped, alice);
 
         // Pre-calculations to be expected from the swap
         uint256 swapTokensTreasury = swapTokensAtAmount * d.apex().treasuryFeeBuyBPS() / d.apex().totalFeeBuyBPS();
@@ -203,38 +203,38 @@ contract TestDeploy is Test {
             swapTokensDividends +
             tokensForLiquidity / 2;
 
-        uint256 usdcSwapped;
+        uint256 wethSwapped;
         {
         IRouter.route[] memory routes = new IRouter.route[](1);
-        routes[0] = IRouter.route(address(usdc), address(d.apex()), false);
+        routes[0] = IRouter.route(address(weth), address(d.apex()), false);
         uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, routes);
-        usdcSwapped = amounts[amounts.length - 1];
+        wethSwapped = amounts[amounts.length - 1];
         }
 
         {
-        uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
+        uint256 wethTreasury = (wethSwapped * swapTokensTreasury) /
             swapTokensTotal;
-        uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
+        uint256 wethDividends = (wethSwapped * swapTokensDividends) /
             swapTokensTotal;
 
-        uint256 usdcDividendTrackerBefore = usdc.balanceOf(address(d.dividendTracker()));
-        uint256 usdcTreasuryBefore = usdc.balanceOf(treasury);
-        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pair()));
+        uint256 wethDividendTrackerBefore = weth.balanceOf(address(d.dividendTracker()));
+        uint256 wethTreasuryBefore = weth.balanceOf(treasury);
+        uint256 wethPairBefore = weth.balanceOf(address(d.apex().pair()));
         uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pair()));
 
         // Buy occurs - triggering the distribution
-        _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
+        _swap(treasury, address(weth), address(d.apex()), amountSwapped, alice);
 
-        // usdc received by dividend tracker
+        // weth received by dividend tracker
         assertEq(
-            usdc.balanceOf(address(d.dividendTracker())) - usdcDividends,
-            usdcDividendTrackerBefore
+            weth.balanceOf(address(d.dividendTracker())) - wethDividends,
+            wethDividendTrackerBefore
         );
 
-        // usdc received by treasury
+        // weth received by treasury
         assertEq(
-            usdc.balanceOf(treasury) - usdcTreasury,
-            usdcTreasuryBefore
+            weth.balanceOf(treasury) - wethTreasury,
+            wethTreasuryBefore
         );
 
         // balance of apex in tokenStorage should only be the amountSwapped since it swapped out the prior amountSwapped
@@ -245,8 +245,8 @@ contract TestDeploy is Test {
 
         // liquidity added to pair
         assertGt(
-            usdc.balanceOf(address(d.apex().pair())),
-            usdcPairBefore
+            weth.balanceOf(address(d.apex().pair())),
+            wethPairBefore
         );
         assertGt(
             d.apex().balanceOf(address(d.apex().pair())),
@@ -261,7 +261,7 @@ contract TestDeploy is Test {
         uint256 amountSwapped = swapTokensAtAmount * 100 / 11;
         
         // sell
-        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+        _swap(treasury, address(d.apex()), address(weth), amountSwapped, alice);
 
         // Pre-calculations to be expected from the swap
         uint256 swapTokensTreasury = swapTokensAtAmount * d.apex().treasuryFeeSellBPS() / d.apex().totalFeeSellBPS();
@@ -271,38 +271,38 @@ contract TestDeploy is Test {
             swapTokensDividends +
             tokensForLiquidity / 2;
 
-        uint256 usdcSwapped;
+        uint256 wethSwapped;
         {
         IRouter.route[] memory routes = new IRouter.route[](1);
-        routes[0] = IRouter.route(address(usdc), address(d.apex()), false);
+        routes[0] = IRouter.route(address(weth), address(d.apex()), false);
         uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, routes);
-        usdcSwapped = amounts[amounts.length - 1];
+        wethSwapped = amounts[amounts.length - 1];
         }
 
         {
-        uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
+        uint256 wethTreasury = (wethSwapped * swapTokensTreasury) /
             swapTokensTotal;
-        uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
+        uint256 wethDividends = (wethSwapped * swapTokensDividends) /
             swapTokensTotal;
 
-        uint256 usdcDividendTrackerBefore = usdc.balanceOf(address(d.dividendTracker()));
-        uint256 usdcTreasuryBefore = usdc.balanceOf(treasury);
-        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pair()));
+        uint256 wethDividendTrackerBefore = weth.balanceOf(address(d.dividendTracker()));
+        uint256 wethTreasuryBefore = weth.balanceOf(treasury);
+        uint256 wethPairBefore = weth.balanceOf(address(d.apex().pair()));
         uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pair()));
 
         // Sell occurs - triggering the distribution
-        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+        _swap(treasury, address(d.apex()), address(weth), amountSwapped, alice);
 
-        // usdc received by dividend tracker
+        // weth received by dividend tracker
         assertEq(
-            usdc.balanceOf(address(d.dividendTracker())) - usdcDividends,
-            usdcDividendTrackerBefore
+            weth.balanceOf(address(d.dividendTracker())) - wethDividends,
+            wethDividendTrackerBefore
         );
 
-        // usdc received by treasury
+        // weth received by treasury
         assertEq(
-            usdc.balanceOf(treasury) - usdcTreasury,
-            usdcTreasuryBefore
+            weth.balanceOf(treasury) - wethTreasury,
+            wethTreasuryBefore
         );
 
         // balance of apex in tokenStorage should only be the amountSwapped since it swapped out the prior amountSwapped
@@ -313,8 +313,8 @@ contract TestDeploy is Test {
 
         // liquidity added to pair
         assertGt(
-            usdc.balanceOf(address(d.apex().pair())),
-            usdcPairBefore
+            weth.balanceOf(address(d.apex().pair())),
+            wethPairBefore
         );
         assertGt(
             d.apex().balanceOf(address(d.apex().pair())),
@@ -331,9 +331,9 @@ contract TestDeploy is Test {
         uint256 amountSwapped = swapTokensAtAmount * 40;
 
         // buy
-        _swap(treasury, address(usdc), address(d.apex()), amountSwapped, alice);
+        _swap(treasury, address(weth), address(d.apex()), amountSwapped, alice);
         // sell
-        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+        _swap(treasury, address(d.apex()), address(weth), amountSwapped, alice);
 
         uint256 swapTokensTreasury = 
             swapTokensAtAmount * d.apex().treasuryFeeBuyBPS() / d.apex().totalFeeBuyBPS() + 
@@ -346,38 +346,38 @@ contract TestDeploy is Test {
             swapTokensDividends +
             tokensForLiquidity / 2;
         
-        uint256 usdcSwapped;
+        uint256 wethSwapped;
         {
         IRouter.route[] memory routes = new IRouter.route[](1);
-        routes[0] = IRouter.route(address(usdc), address(d.apex()), false);
+        routes[0] = IRouter.route(address(weth), address(d.apex()), false);
         uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, routes);
-        usdcSwapped = amounts[amounts.length - 1];
+        wethSwapped = amounts[amounts.length - 1];
         }
 
         {
-        uint256 usdcTreasury = (usdcSwapped * swapTokensTreasury) /
+        uint256 wethTreasury = (wethSwapped * swapTokensTreasury) /
             swapTokensTotal;
-        uint256 usdcDividends = (usdcSwapped * swapTokensDividends) /
+        uint256 wethDividends = (wethSwapped * swapTokensDividends) /
             swapTokensTotal;
 
-        uint256 usdcDividendTrackerBefore = usdc.balanceOf(address(d.dividendTracker()));
-        uint256 usdcTreasuryBefore = usdc.balanceOf(treasury);
-        uint256 usdcPairBefore = usdc.balanceOf(address(d.apex().pair()));
+        uint256 wethDividendTrackerBefore = weth.balanceOf(address(d.dividendTracker()));
+        uint256 wethTreasuryBefore = weth.balanceOf(treasury);
+        uint256 wethPairBefore = weth.balanceOf(address(d.apex().pair()));
         uint256 apexPairBefore = d.apex().balanceOf(address(d.apex().pair()));
 
         // Sell occurs - triggering the distribution
-        _swap(treasury, address(d.apex()), address(usdc), amountSwapped, alice);
+        _swap(treasury, address(d.apex()), address(weth), amountSwapped, alice);
 
-        // usdc received by dividend tracker
+        // weth received by dividend tracker
         assertEq(
-            usdc.balanceOf(address(d.dividendTracker())) - usdcDividends,
-            usdcDividendTrackerBefore
+            weth.balanceOf(address(d.dividendTracker())) - wethDividends,
+            wethDividendTrackerBefore
         );
 
-        // usdc received by treasury
+        // weth received by treasury
         assertEq(
-            usdc.balanceOf(treasury) - usdcTreasury,
-            usdcTreasuryBefore
+            weth.balanceOf(treasury) - wethTreasury,
+            wethTreasuryBefore
         );
 
         // balance of apex in tokenStorage should only be the amountSwapped since it swapped out the prior amountSwapped
@@ -388,8 +388,8 @@ contract TestDeploy is Test {
 
         // liquidity added to pair
         assertGt(
-            usdc.balanceOf(address(d.apex().pair())),
-            usdcPairBefore
+            weth.balanceOf(address(d.apex().pair())),
+            wethPairBefore
         );
         assertGt(
             d.apex().balanceOf(address(d.apex().pair())),
