@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./interfaces/ICamelotRouter.sol";
+import "./interfaces/IRouter.sol";
 import "./interfaces/IDividendTracker.sol";
 
 contract DividendTracker is Ownable, IERC20, IDividendTracker {
@@ -20,7 +20,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
     address public immutable usdc;
     address public immutable apex;
-    ICamelotRouter public immutable router;
+    IRouter public immutable router;
 
     uint256 public totalDividendsDistributed;
     uint256 public totalDividendsWithdrawn;
@@ -46,7 +46,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
 
         usdc = _usdc;
         apex = _apex;
-        router = ICamelotRouter(_router);
+        router = IRouter(_router);
     }
 
     /* ============ External Functions ============ */
@@ -314,9 +314,8 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
             totalDividendsWithdrawn += _withdrawableDividend;
             emit DividendWithdrawn(account, _withdrawableDividend);
 
-            address[] memory path = new address[](2);
-            path[0] = usdc;
-            path[1] = apex;
+            IRouter.route[] memory routes = new IRouter.route[](1);
+            routes[0] = IRouter.route(usdc, apex, false);
 
             bool success = false;
             uint256 tokens = 0;
@@ -331,9 +330,8 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
                     .swapExactTokensForTokensSupportingFeeOnTransferTokens(
                         _withdrawableDividend,
                         0,
-                        path,
+                        routes,
                         address(account),
-                        address(0), // referrer
                         block.timestamp
                     )
             {

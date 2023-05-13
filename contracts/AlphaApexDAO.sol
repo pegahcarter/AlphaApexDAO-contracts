@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IUniswapV2Factory } from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import { ICamelotRouter } from "./interfaces/ICamelotRouter.sol";
 
+import { IRouter } from "./interfaces/IRouter.sol";
+import { IPairFactory } from "./interfaces/IPairFactory.sol";
 import { DividendTracker } from "./DividendTracker.sol";
 import { ITokenStorage } from "./interfaces/ITokenStorage.sol";
 import { IAlphaApexDAO } from "./interfaces/IAlphaApexDAO.sol";
@@ -23,7 +22,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     string private constant _symbol = "APEX";
 
     DividendTracker public immutable dividendTracker;
-    ICamelotRouter public immutable router;
+    IRouter public immutable router;
     IERC20 public immutable usdc;
     ITokenStorage public tokenStorage;
 
@@ -73,10 +72,11 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         usdc = IERC20(_usdc);
         treasury = _treasury;
 
-        router = ICamelotRouter(_router);
-        pair = IUniswapV2Factory(router.factory()).createPair(
+        router = IRouter(_router);
+        pair = IPairFactory(router.factory()).createPair(
                 address(this),
-                _usdc
+                _usdc,
+                false
             );
 
         dividendTracker = new DividendTracker(

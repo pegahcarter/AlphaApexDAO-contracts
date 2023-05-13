@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
 import { Deploy } from "../script/Deploy.s.sol";
-import { ICamelotRouter } from "contracts/interfaces/ICamelotRouter.sol";
+import { IRouter } from "contracts/interfaces/IRouter.sol";
 import { IERC20 } from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
@@ -17,7 +17,7 @@ contract TestDeploy is Test {
     uint256 privateKey = vm.envUint("PRIVATE_KEY");
     address publicKey = vm.addr(privateKey);
     IERC20 usdc = IERC20(vm.envAddress("USDC"));
-    ICamelotRouter router = ICamelotRouter(vm.envAddress("ROUTER"));
+    IRouter router = IRouter(vm.envAddress("ROUTER"));
     address treasury = vm.envAddress("TREASURY");
     string ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
     uint256 BLOCK_NUMBER = vm.envOr("BLOCK_NUMBER", uint256(0));
@@ -47,6 +47,7 @@ contract TestDeploy is Test {
         router.addLiquidity(
             address(d.apex()),
             address(usdc),
+            false,
             initialAPEXLiquidity,
             initialUSDCLiquidity,
             0,
@@ -136,16 +137,14 @@ contract TestDeploy is Test {
     }
 
     function _swap(address from, address input, address output, uint256 amount, address recipient) internal {
-        address[] memory path = new address[](2);
-        path[0] = input;
-        path[1] = output;
+        IRouter.route[] memory routes = new IRouter.route[](1);
+        routes[0] = IRouter.route(input, output, false);
         vm.prank(from);
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             amount,
             0,
-            path,
+            routes,
             recipient,
-            address(0),
             block.timestamp + 1
         );
     }
@@ -206,10 +205,9 @@ contract TestDeploy is Test {
 
         uint256 usdcSwapped;
         {
-        address[] memory path = new address[](2);
-        path[0] = address(usdc);
-        path[1] = address(d.apex());
-        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
+        IRouter.route[] memory routes = new IRouter.route[](1);
+        routes[0] = IRouter.route(address(usdc), address(d.apex()), false);
+        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, routes);
         usdcSwapped = amounts[amounts.length - 1];
         }
 
@@ -275,10 +273,9 @@ contract TestDeploy is Test {
 
         uint256 usdcSwapped;
         {
-        address[] memory path = new address[](2);
-        path[0] = address(usdc);
-        path[1] = address(d.apex());
-        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
+        IRouter.route[] memory routes = new IRouter.route[](1);
+        routes[0] = IRouter.route(address(usdc), address(d.apex()), false);
+        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, routes);
         usdcSwapped = amounts[amounts.length - 1];
         }
 
@@ -351,10 +348,9 @@ contract TestDeploy is Test {
         
         uint256 usdcSwapped;
         {
-        address[] memory path = new address[](2);
-        path[0] = address(usdc);
-        path[1] = address(d.apex());
-        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, path);
+        IRouter.route[] memory routes = new IRouter.route[](1);
+        routes[0] = IRouter.route(address(usdc), address(d.apex()), false);
+        uint256[] memory amounts = router.getAmountsOut(swapTokensAtAmount, routes);
         usdcSwapped = amounts[amounts.length - 1];
         }
 

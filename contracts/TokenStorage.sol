@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 
 import { IERC20 } from  "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from  "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ICamelotRouter } from "./interfaces/ICamelotRouter.sol";
+import { IRouter } from "./interfaces/IRouter.sol";
 
 import { IDividendTracker } from  "./interfaces/IDividendTracker.sol";
 import { ITokenStorage } from  "./interfaces/ITokenStorage.sol";
@@ -15,7 +15,7 @@ contract TokenStorage is ITokenStorage {
     /* ============ State ============ */
 
     IDividendTracker public immutable dividendTracker;
-    ICamelotRouter public router;
+    IRouter public router;
 
     address public immutable usdc;
     address public immutable apex;
@@ -47,7 +47,7 @@ contract TokenStorage is ITokenStorage {
         apex = _apex;
         liquidityWallet = _liquidityWallet;
         dividendTracker = IDividendTracker(_dividendTracker);
-        router = ICamelotRouter(_router);
+        router = IRouter(_router);
     }
 
     /* ============ External Functions ============ */
@@ -59,17 +59,15 @@ contract TokenStorage is ITokenStorage {
 
     function swapTokensForUSDC(uint256 tokens) external {
         require(msg.sender == apex, "!apex");
-        address[] memory path = new address[](2);
-        path[0] = apex;
-        path[1] = usdc;
+        IRouter.route[] memory routes = new IRouter.route[](1);
+        routes[0] = IRouter.route(apex, usdc, false);
 
         IERC20(apex).approve(address(router), tokens);
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             tokens,
             0, // accept any amount of usdc
-            path,
+            routes,
             address(this),
-            address(0), // referer
             block.timestamp
         );
 
@@ -86,6 +84,7 @@ contract TokenStorage is ITokenStorage {
         router.addLiquidity(
             apex,
             usdc,
+            false, // stable
             tokens,
             usdcs,
             0, // slippage unavoidable
