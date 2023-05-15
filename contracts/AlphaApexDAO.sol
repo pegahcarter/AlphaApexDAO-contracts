@@ -41,7 +41,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
     uint256 public totalFeeBuyBPS;
     uint256 public totalFeeSellBPS;
 
-    uint256 public swapTokensAtAmount = 100_000 * (10**18);
+    uint256 public swapTokensAtAmount = 10_000 * (10**18);
     uint256 public lastSwapTime;
 
     bool public swapAllToken = true;
@@ -73,11 +73,11 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         treasury = _treasury;
 
         router = IRouter(_router);
-        pair = IPairFactory(router.factory()).createPair(
-                address(this),
-                _weth,
-                false
-            );
+        // pair = IPairFactory(router.factory()).createPair(
+        //         address(this),
+        //         _weth,
+        //         false
+        //     );
 
         dividendTracker = new DividendTracker(
             _weth,
@@ -85,7 +85,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
             address(router)
         );
 
-        _setAutomatedMarketMakerPair(pair, true);
+        // _setAutomatedMarketMakerPair(pair, true);
 
         dividendTracker.excludeFromDividends(address(dividendTracker), true);
         dividendTracker.excludeFromDividends(address(this), true);
@@ -100,6 +100,17 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         
         totalFeeBuyBPS = treasuryFeeBuyBPS + liquidityFeeBuyBPS + dividendFeeBuyBPS;
         totalFeeSellBPS = treasuryFeeSellBPS + liquidityFeeSellBPS + dividendFeeSellBPS;
+    }
+
+    function initialize() public {
+        require(pair == address(0), "Already initialized");
+        pair = IPairFactory(router.factory()).createPair(
+                address(this),
+                address(weth),
+                false
+            );
+        _setAutomatedMarketMakerPair(pair, true);
+
     }
 
     /* ============ External View Functions ============ */
