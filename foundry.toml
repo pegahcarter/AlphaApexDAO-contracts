@@ -6,3 +6,9 @@ src = 'contracts'
 out = 'artifacts'
 
 fs_permissions = [{ access = "read", path = "./"}]
+
+[rpc_endpoints]
+arbitrum = "${ARBITRUM_RPC_URL}"
+
+[etherscan]
+arbitrum = {key = "${ARBISCAN_KEY}" url = "https://api.arbiscan.io" }

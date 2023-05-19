@@ -1,27 +1,17 @@
 # <h1 align="center"> Alpha Apex DAO </h1>
 
-## TODO
-* [x] DAI => WETH
-    * [x] rename vars
-    * [x] set contract addresses
-* [x] Add logic for buy orders
-* [x] Add logic for sell orders
-* [x] Setup
-    * [x] Configure initial distribution recipients and amounts - all to msig (TODO: address to receive)
-    * [x] Determine `minTokenBalanceForDividends`
-    * [x] Determine `swapTokensAtAmount`
-    * [x] Should fee rates be configurable?
+## Getting started
+1. Create `.env` file following `.env.example` template
+2.
+```
+forge build
+forge test
+```
+### Deployment
+```
+source .env
 
-* [ ] Safemath
-    * [x] Rmv from MultiRewards
-    * [x] Re-validate math 
-* [x] Rmv max wallet checks
-* [x] Tests
-    * [x] Deployment checks
-    * [x] Buy logic
-    * [x] Sell logic
-    * [x] Buy & sell logic
-    * [x] transfer logic
-* [x] Fix imports
+forge script script/Deploy.s.sol:Deploy --broadcast --rpc-url $ARBITRUM_RPC_URL --verify -vvvv
+```
 
 This project uses [Foundry](https://getfoundry.sh). See the [book](https://book.getfoundry.sh/getting-started/installation.html) for instructions on how to install and use Foundry.
