@@ -21,7 +21,7 @@ interface IDividendTracker {
         view
         returns (bool);
 
-    function processAccount(address account) external returns (bool);
+    function processAccount(address account) external payable returns (bool);
 
     function compoundAccount(address account) external returns (bool);
 

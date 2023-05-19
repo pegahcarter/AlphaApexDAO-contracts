@@ -16,8 +16,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
 
     /* ============ State ============ */
 
-    address public constant DEAD = 0x000000000000000000000000000000000000dEaD;
-
     string private constant _name = "AlphaApexDAO";
     string private constant _symbol = "APEX";
 
@@ -73,11 +71,6 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         treasury = _treasury;
 
         router = IRouter(_router);
-        // pair = IPairFactory(router.factory()).createPair(
-        //         address(this),
-        //         _weth,
-        //         false
-        //     );
 
         dividendTracker = new DividendTracker(
             _weth,
@@ -85,13 +78,9 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
             address(router)
         );
 
-        // _setAutomatedMarketMakerPair(pair, true);
-
         dividendTracker.excludeFromDividends(address(dividendTracker), true);
         dividendTracker.excludeFromDividends(address(this), true);
         dividendTracker.excludeFromDividends(address(router), true);
-        dividendTracker.excludeFromDividends(treasury, true);
-        dividendTracker.excludeFromDividends(DEAD, true);
 
         excludeFromFees(address(this), true);
         excludeFromFees(address(dividendTracker), true);
@@ -255,7 +244,7 @@ contract AlphaApexDAO is Ownable, IERC20, IAlphaApexDAO {
         return true;
     }
 
-    function claim() external {
+    function claim() external payable {
         bool result = dividendTracker.processAccount(_msgSender());
 
         require(result, "Apex: claim failed");

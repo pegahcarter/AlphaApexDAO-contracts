@@ -25,7 +25,7 @@ interface IAlphaApexDAO {
         bool _swapAllToken
     );
 
-    function claim() external;
+    function claim() external payable;
 
     function withdrawableDividendOf(address account)
         external

@@ -50,6 +50,10 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
         router = IRouter(_router);
     }
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     /* ============ External Functions ============ */
 
     function distributeDividends(uint256 wethDividends) external {
@@ -106,7 +110,7 @@ contract DividendTracker is Ownable, IERC20, IDividendTracker {
         emit ExcludeFromDividends(account, excluded);
     }
 
-    function processAccount(address account) external onlyOwner returns (bool) {
+    function processAccount(address account) external payable onlyOwner returns (bool) {
         uint256 amount = _withdrawDividendOfUser(account);
         if (amount > 0) {
             lastClaimTimes[account] = block.timestamp;
