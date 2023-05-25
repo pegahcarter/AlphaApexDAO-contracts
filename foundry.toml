@@ -11,4 +11,4 @@ fs_permissions = [{ access = "read", path = "./"}]
 arbitrum = "${ARBITRUM_RPC_URL}"
 
 [etherscan]
-arbitrum = {key = "${ARBISCAN_KEY}" url = "https://api.arbiscan.io" }
+arbitrum = {key = "${ARBISCAN_API_KEY}", url = "https://api.arbiscan.io" }
